@@ -66,11 +66,11 @@ ManualGraphTest создаёт настоящий AppContainer и проверя
 auth/feature flags, cleanup и ошибку отсутствующей регистрации.
 Компилятор проверяет обычные вызовы конструкторов; полнота ручных регистраций проверяется тестами.
 
-- [AppContainer](https://github.com/akma302/NavPlayground/blob/main/app/src/main/kotlin/dev/navplay/app/di/AppContainer.kt)
-- [Application](https://github.com/akma302/NavPlayground/blob/main/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
-- [MainActivity](https://github.com/akma302/NavPlayground/blob/main/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
-- [ManualViewModelFactory](https://github.com/akma302/NavPlayground/blob/main/core/di/src/main/kotlin/dev/navplay/core/di/ManualViewModelFactory.kt)
-- [Compose helper](https://github.com/akma302/NavPlayground/blob/main/core/di/src/main/kotlin/dev/navplay/core/di/ManualViewModel.kt)
-- [ManualGraphTest](https://github.com/akma302/NavPlayground/blob/main/app/src/test/kotlin/dev/navplay/app/di/ManualGraphTest.kt)
+- [AppContainer](https://github.com/akma302/NavPlayground/blob/21d9b76/app/src/main/kotlin/dev/navplay/app/di/AppContainer.kt)
+- [Application](https://github.com/akma302/NavPlayground/blob/21d9b76/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
+- [MainActivity](https://github.com/akma302/NavPlayground/blob/21d9b76/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
+- [ManualViewModelFactory](https://github.com/akma302/NavPlayground/blob/21d9b76/core/di/src/main/kotlin/dev/navplay/core/di/ManualViewModelFactory.kt)
+- [Compose helper](https://github.com/akma302/NavPlayground/blob/21d9b76/core/di/src/main/kotlin/dev/navplay/core/di/ManualViewModel.kt)
+- [ManualGraphTest](https://github.com/akma302/NavPlayground/blob/21d9b76/app/src/test/kotlin/dev/navplay/app/di/ManualGraphTest.kt)
 
 [Сравнение реализаций](README.md)
