@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:name=".PlaygroundApp"
+        android:allowBackup="false"
+        android:label="NavPlayground"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <!-- singleTop: повторная внешняя ссылка приходит в onNewIntent, а не создаёт второй экземпляр. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Внешние ссылки navplay://... Что именно можно открыть, решает не манифест, а
+                 DeepLinkValidationMiddleware (allowlist схем + флаг exported у обработчика). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="navplay" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
