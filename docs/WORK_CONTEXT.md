@@ -5,61 +5,56 @@
 ## Цель и решения
 
 Сравнить Hilt, Koin и Metro в одном Android-приложении с Navigation 3, сохранив поведение.
-Пользователь выбрал отдельные Git-ветки вместо копий проекта и попросил начать с Metro.
-Переключение DI в одной сборке сейчас не создаём.
+Выбраны отдельные Git-ветки вместо копий проекта. Переключение DI в одной сборке не создаём.
+Сначала внедрён Metro, затем по запросу пользователя — Koin с Classic DSL без compiler plugin.
 
-Описание архитектуры и схемы: [атлас DI](di/README.md),
-[Hilt](di/hilt.md), [Metro](di/metro.md), [Koin — план](di/koin.md).
+Архитектура: [атлас DI](di/README.md), [Hilt](di/hilt.md), [Metro](di/metro.md), [Koin](di/koin.md).
 Обзор и команды: [README](../README.md). Правила: [AGENTS](../AGENTS.md).
 
 ## Репозиторий и состояние
 
 - Origin: https://github.com/akma302/NavPlayground.git
 - `main`, `di/hilt`: исходная Hilt-реализация, `a028ebe`.
-- `di/koin`: пока тот же Hilt-код, `a028ebe`; Koin ещё не внедрён.
-- `di/metro`: Metro 1.4.5 внедрён коммитом `3e140eb`; сохранение контекста — `ce15f30`.
-  Оба коммита отправлены в origin. Последующие коммиты документации смотреть в `git log`.
-- Добавлены схемы всех трёх DI и разделена документация без дублирования архитектуры.
-  Схемы Hilt/Metro отражают реализацию; схема Koin описывает предложение на Classic DSL,
-  а не готовый код. Версия Koin и использование compiler plugin пока не выбраны.
-- Все новые документы пока находятся в `di/metro`. В другой ветке читать их через
-  `git show di/metro:docs/WORK_CONTEXT.md` и `git show di/metro:docs/di/README.md`.
-  Для удалённой копии сначала получить актуальную ветку обычным fetch.
+- `di/metro`: Metro 1.4.5, миграция `3e140eb`; схемы и документация — `f96f7a9`.
+- `di/koin`: Koin 4.2.2 внедрён от исходного Hilt; Hilt/KSP удалены.
+  Номер коммита миграции смотреть в `git log di/koin`, чтобы не записывать self-reference.
+- Общие документы синхронизируются между `di/koin` и `di/metro` отдельно от кода.
+  Корневой README в каждой ветке описывает её собственную реализацию.
+- Все три схемы теперь отражают реализованный код. Ссылки на Hilt и Metro закреплены
+  за коммитами; ссылки на Koin ведут в `di/koin`. Подробности не дублируются в контексте.
 
 ## Проверки
 
-До миграции Hilt успешно прошёл assembleDebug и JVM-тесты. После миграции:
+Для каждой миграции выполнено:
 
 ```powershell
 .\gradlew.bat clean :app:assembleDebug testDebugUnitTest --console=plain
 ```
 
-BUILD SUCCESSFUL, 91 тест, 0 failures/errors; debug APK:
-`app/build/outputs/apk/debug/app-debug.apk`.
-
-`MetroGraphTest` создаёт отдельный сгенерированный граф с production-вкладами и проверяет
-общие экземпляры, наборы вкладов, сериализацию и фабрику всех четырёх ViewModel.
-Детали и ссылки — в [схеме Metro](di/metro.md).
-
-После добавления схем код приложения не менялся. Все четыре Mermaid-диаграммы проверены
-парсером Mermaid 11.12.0; локальные Markdown-ссылки в семи документах и `git diff --check` проверены.
-91 тест — результат проверки миграции, не новый запуск ради документации.
+- Metro: BUILD SUCCESSFUL, 91 тест, 0 failures/errors.
+- Koin: BUILD SUCCESSFUL, 93 теста, 0 failures/errors.
+- Для обеих создан debug APK: `app/build/outputs/apk/debug/app-debug.apk`.
+  Этот локальный путь содержит артефакт последней собранной ветки, не обе версии одновременно.
+- KoinGraphTest поднимает production appModules с `allowOverride(false)` и проверяет
+  identity общих объектов, 5 entries / 7 middleware / 3 handlers / 5 serializer contributions,
+  Koin-фабрику четырёх ViewModel, разделение/очистку ViewModelStore,
+  auth/feature flags, отмену coroutine scope при закрытии и свежие singles нового контейнера.
+- MetroGraphTest проверяет сгенерированный проверочный граф с production-вкладами.
 
 ## Что остаётся
 
-- UI на устройстве/эмуляторе и release-сборка не проверялись.
-- Полезная проверка Metro: auth redirect, выбор медиа с результатом, deep links,
-  поворот экрана и восстановление после смерти процесса.
-- Следующая DI-миграция: Koin в `di/koin`, начиная с Hilt, а не с Metro.
-  План схемы уточнить по фактическому коду, затем убрать пометку «план» и проверить сборку/тесты.
+- UI на устройстве/эмуляторе и release-сборки не проверялись.
+- Следующая полезная проверка обеих реализаций: auth redirect, media result, deep links,
+  поворот и восстановление после смерти процесса.
+- Koin использует runtime resolution без compile-time проверки: текущие регистрации покрыты
+  тестами, но новые definitions требуют актуализации тестов. Compiler plugin можно оценить отдельно.
 - Общие исправления логики переносить между ветками отдельно от DI-изменений.
-- Ожидания результатов навигации находятся в памяти и не переживают смерть процесса:
+- Ожидания результатов навигации живут в памяти и не переживают смерть процесса:
   это существующее ограничение.
 
 ## Среда
 
 Windows / PowerShell; Gradle 9.6.0, AGP 9.4.0, Kotlin 2.4.21.
-Daemon JVM 25 задан в `gradle/gradle-daemon-jvm.properties`;
-SDK — через игнорируемый `local.properties`.
-В ограниченной среде Gradle-кеш/сеть и Git push могут требовать разрешение.
-`gh` не установлен; обычный Git push работает через credential helper.
+Daemon JVM 25 задан в `gradle/gradle-daemon-jvm.properties`; SDK — в игнорируемом local.properties.
+Gradle-кеш/сеть и Git push могут требовать разрешение. `gh` не установлен;
+обычный Git push работает через credential helper.
