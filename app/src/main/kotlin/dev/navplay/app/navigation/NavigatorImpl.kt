@@ -1,6 +1,7 @@
 package dev.navplay.app.navigation
 
 import androidx.compose.runtime.mutableStateListOf
+import dev.navplay.core.di.AppScope
 import dev.navplay.core.navigation.NavKey
 import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.NavigationLog
@@ -9,8 +10,8 @@ import dev.navplay.core.navigation.NavigationPipeline
 import dev.navplay.core.navigation.NavigationResultException
 import dev.navplay.core.navigation.Navigator
 import dev.navplay.core.navigation.ResultKey
-import javax.inject.Inject
-import javax.inject.Singleton
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -30,7 +31,7 @@ import kotlinx.coroutines.launch
  * Всё изменение стека происходит на `scope` (в приложении — `Dispatchers.Main.immediate`), поэтому
  * `SnapshotStateList` пишется с main-потока. [forResult] и [finishWithResult] тоже вызываются с него.
  */
-@Singleton
+@SingleIn(AppScope::class)
 class NavigatorImpl(
     private val stack: MutableList<NavKey>,
     middleware: Collection<NavigationMiddleware>,
@@ -38,7 +39,7 @@ class NavigatorImpl(
     scope: CoroutineScope,
 ) : Navigator {
 
-    /** Конструктор для Hilt: бэкстек — Compose-состояние, чтобы NavDisplay перерисовывался сам. */
+    /** Конструктор для Metro: бэкстек — Compose-состояние, чтобы NavDisplay перерисовывался сам. */
     @Inject
     constructor(
         middleware: Set<@JvmSuppressWildcards NavigationMiddleware>,

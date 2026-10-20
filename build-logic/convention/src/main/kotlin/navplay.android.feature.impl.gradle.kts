@@ -1,10 +1,10 @@
 // :feature:<name>:impl — экраны, ViewModel, DI-регистрация в навигации.
-// Видит свой api, чужие api и :core:navigation. Чужие impl — никогда (правило проверяется ревью/графом).
+// Видит свой api, чужие api, :core:navigation и :core:di. Чужие impl — никогда.
 
 plugins {
     id("navplay.android.library")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
+    id("dev.zacsweers.metro")
 }
 
 android {
@@ -14,6 +14,8 @@ android {
 }
 
 dependencies {
+    "implementation"(project(":core:di"))
+    "implementation"(libs.lib("metrox-viewmodel-compose"))
     "implementation"(project(":core:navigation"))
 
     "implementation"(platform(libs.lib("androidx-compose-bom")))
@@ -22,8 +24,4 @@ dependencies {
     "implementation"(libs.lib("androidx-compose-material3"))
     "implementation"(libs.lib("androidx-lifecycle-runtime-compose"))
     "implementation"(libs.lib("androidx-lifecycle-viewmodel-compose"))
-
-    "implementation"(libs.lib("hilt-android"))
-    "implementation"(libs.lib("androidx-hilt-lifecycle-viewmodel-compose"))
-    "ksp"(libs.lib("hilt-compiler"))
 }

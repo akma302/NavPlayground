@@ -1,36 +1,37 @@
 package dev.navplay.feature.feed.impl
 
 import androidx.navigation3.runtime.EntryProviderScope
-import dagger.Binds
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import dagger.multibindings.IntoSet
+import dev.navplay.core.di.AppScope
 import dev.navplay.core.navigation.DeepLinkHandler
 import dev.navplay.core.navigation.NavEntryContributor
 import dev.navplay.core.navigation.NavKey
 import dev.navplay.core.navigation.NavKeySerializers
 import dev.navplay.core.navigation.navKeys
 import dev.navplay.feature.feed.api.FeedNavKey
-import javax.inject.Inject
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.Binds
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.IntoSet
+import dev.zacsweers.metro.Provides
 
-class FeedEntryContributor @Inject constructor() : NavEntryContributor {
+@Inject
+class FeedEntryContributor() : NavEntryContributor {
     override fun register(scope: EntryProviderScope<NavKey>) {
         scope.entry<FeedNavKey> { FeedScreen() }
     }
 }
 
-@Module
-@InstallIn(SingletonComponent::class)
+@BindingContainer
+@ContributesTo(AppScope::class)
 abstract class FeedNavigationModule {
     @Binds
     @IntoSet
-    abstract fun entries(impl: FeedEntryContributor): NavEntryContributor
+    abstract val FeedEntryContributor.entries: NavEntryContributor
 
     @Binds
     @IntoSet
-    abstract fun deepLink(impl: FeedDeepLinkHandler): DeepLinkHandler
+    abstract val FeedDeepLinkHandler.deepLink: DeepLinkHandler
 
     companion object {
         @Provides

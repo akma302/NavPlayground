@@ -19,6 +19,7 @@ rootProject.name = "NavPlayground"
 
 include(":app")
 include(":core:navigation")
+include(":core:di")
 include(":core:navigation-testing")
 
 include(":feature:auth:api", ":feature:auth:impl")

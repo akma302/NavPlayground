@@ -44,7 +44,7 @@ fun AppNavigation(
         onBack = { navigator.execute(NavigationCommand.Back) },
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator<NavKey>(),
-            // ViewModel привязан к записи бэкстека: hiltViewModel() внутри экрана живёт, пока экран в стеке.
+            // ViewModel привязан к записи бэкстека: metroViewModel() внутри экрана живёт, пока экран в стеке.
             rememberViewModelStoreNavEntryDecorator<NavKey>(),
         ),
         entryProvider = provider,

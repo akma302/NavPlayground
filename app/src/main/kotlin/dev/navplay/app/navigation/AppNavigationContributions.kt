@@ -8,10 +8,11 @@ import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.NavigationLog
 import dev.navplay.core.navigation.Navigator
 import dev.navplay.core.navigation.StubNavKey
-import javax.inject.Inject
+import dev.zacsweers.metro.Inject
 
 /** Экран-заглушка выключенной фичи. Его регистрирует `:app`: StubNavKey живёт в core и не знает про UI. */
-class StubEntryContributor @Inject constructor(
+@Inject
+class StubEntryContributor(
     private val navigator: Navigator,
 ) : NavEntryContributor {
     override fun register(scope: EntryProviderScope<NavKey>) {

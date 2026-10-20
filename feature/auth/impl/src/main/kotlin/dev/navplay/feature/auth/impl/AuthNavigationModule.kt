@@ -1,12 +1,7 @@
 package dev.navplay.feature.auth.impl
 
 import androidx.navigation3.runtime.EntryProviderScope
-import dagger.Binds
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import dagger.multibindings.IntoSet
+import dev.navplay.core.di.AppScope
 import dev.navplay.core.navigation.DeepLinkHandler
 import dev.navplay.core.navigation.NavEntryContributor
 import dev.navplay.core.navigation.NavKey
@@ -15,34 +10,38 @@ import dev.navplay.core.navigation.NavigationMiddleware
 import dev.navplay.core.navigation.navKeys
 import dev.navplay.feature.auth.api.AuthNavKey
 import dev.navplay.feature.auth.api.SessionManager
-import javax.inject.Inject
-import javax.inject.Singleton
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.Binds
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.IntoSet
+import dev.zacsweers.metro.Provides
 
 /** Фича сама вносит себя в граф: экран, middleware, deep link и сериализатор ключа. */
-class AuthEntryContributor @Inject constructor() : NavEntryContributor {
+@Inject
+class AuthEntryContributor() : NavEntryContributor {
     override fun register(scope: EntryProviderScope<NavKey>) {
         scope.entry<AuthNavKey> { key -> AuthScreen(returnTo = key.returnTo) }
     }
 }
 
-@Module
-@InstallIn(SingletonComponent::class)
+@BindingContainer
+@ContributesTo(AppScope::class)
 abstract class AuthNavigationModule {
     @Binds
-    @Singleton
-    abstract fun sessionManager(impl: InMemorySessionManager): SessionManager
+    abstract val InMemorySessionManager.sessionManager: SessionManager
 
     @Binds
     @IntoSet
-    abstract fun middleware(impl: AuthMiddleware): NavigationMiddleware
+    abstract val AuthMiddleware.middleware: NavigationMiddleware
 
     @Binds
     @IntoSet
-    abstract fun entries(impl: AuthEntryContributor): NavEntryContributor
+    abstract val AuthEntryContributor.entries: NavEntryContributor
 
     @Binds
     @IntoSet
-    abstract fun deepLink(impl: AuthDeepLinkHandler): DeepLinkHandler
+    abstract val AuthDeepLinkHandler.deepLink: DeepLinkHandler
 
     companion object {
         @Provides

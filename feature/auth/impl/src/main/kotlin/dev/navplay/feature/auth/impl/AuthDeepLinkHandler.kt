@@ -3,10 +3,11 @@ package dev.navplay.feature.auth.impl
 import dev.navplay.core.navigation.DeepLinkHandler
 import dev.navplay.core.navigation.NavKey
 import dev.navplay.feature.auth.api.AuthNavKey
-import javax.inject.Inject
+import dev.zacsweers.metro.Inject
 
 /** `navplay://auth` — только для внутренних переходов (`exported = false`): внешняя ссылка будет отклонена. */
-class AuthDeepLinkHandler @Inject constructor() : DeepLinkHandler {
+@Inject
+class AuthDeepLinkHandler() : DeepLinkHandler {
     override val pattern = "navplay://auth"
     override val exported = false
 

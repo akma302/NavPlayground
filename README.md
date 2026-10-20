@@ -21,6 +21,29 @@ Playground для подготовки к собеседованию: много
 Правила: `impl` → чужие `api` и `core`, **никогда** чужой `impl`; `core` не знает ни одной фичи;
 `:app` — единственный, кто видит все `impl`.
 
+## DI: Metro (ветка `di/metro`)
+
+Используется [Metro](https://zacsweers.github.io/metro/latest/) 1.4.5. Плагины и зависимости Hilt/KSP
+в этой ветке удалены. Исходная реализация сохранена в `di/hilt` и `main`.
+
+- `core:di` содержит общий маркер `AppScope`, доступный фичам и `app`.
+- `app/di/AppGraph.kt`: `@DependencyGraph(AppScope::class)` собирает вклады фич при компиляции.
+  `PlaygroundApp` создаёт граф через `createGraph<AppGraph>()` один раз на процесс.
+- `*NavigationModule.kt`: `@BindingContainer` + `@ContributesTo(AppScope::class)` заменяют Hilt-модули.
+  `@Binds` объявляются как extension properties; `@IntoSet` сохраняет наборы экранов, middleware,
+  deep link handlers и сериализаторов. Подключения Gradle-модуля фичи достаточно для обнаружения вкладов.
+- `@SingleIn(AppScope::class)` сохраняет общие экземпляры навигатора, сессии, feature flags,
+  лога, кодека, resolver, аналитики и coroutine scope. `NavigationScope` — qualifier, а не DI scope.
+- ViewModel: `@Inject` + `@ViewModelKey` + `@ContributesIntoMap(AppScope::class)`.
+  `AppViewModelFactory` наследует `MetroViewModelFactory`, а `AppGraph` — `ViewModelGraph`.
+  Activity передаёт фабрику через `LocalMetroViewModelFactory`, экраны вызывают `metroViewModel()`.
+  `rememberViewModelStoreNavEntryDecorator` по-прежнему задаёт время жизни ViewModel по записи стека;
+  ViewModel не являются singleton графа приложения.
+
+`MetroGraphTest` создаёт сгенерированный граф с production-вкладами и проверяет singleton-привязки,
+все навигационные регистрации и сериализаторы, создание всех четырёх ViewModel, разделение экземпляров
+между ViewModelStore и общую сессию/навигацию. Старый `NavigationGraphTest` оставлен как тест контрактов.
+
 ## Где что лежит (карта «вопрос интервьюера → код»)
 
 | Тема | Код |
@@ -88,12 +111,8 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 
 ## Статус проверки
 
-Проверено запуском (Kotlin 2.0.21, coroutines 1.6.4, JUnit 4.13.2 на заглушках Android-классов):
-логика core, `NavigatorImpl`, все middleware, ViewModel, обработчики deep link — 82 теста зелёные,
-намеренно внесённые в навигатор ошибки тесты ловят.
+2026-10-20: `./gradlew :app:assembleDebug testDebugUnitTest --console=plain` — успешно,
+91 JVM-тест, без ошибок. Скомпилированы Metro-граф, Compose-экраны и Navigation 3; создан debug APK.
+Проверка UI на устройстве/эмуляторе и release-сборка не выполнялись.
 
-**Не проверялось сборкой**: Gradle sync, Hilt/KSP, Compose-экраны, `NavDisplay`, сериализация (`BackStackCodecTest`,
-`NavigationGraphTest`) — в окружении, где писался проект, не было доступа к Google/Maven. Версии в
-`gradle/libs.versions.toml` взяты из официальных страниц релизов, но их совместимость между собой (KSP ↔ Kotlin,
-Hilt ↔ AGP 9, имена API Navigation 3) не проверена. Если sync ругается — начните с этого файла.
-AGP 9.4.0 требует Gradle 9.6.0 (прописан в wrapper) и JDK 17+.
+Gradle 9.6.0 задан в wrapper; `gradle/gradle-daemon-jvm.properties` выбирает JDK 25 для daemon.

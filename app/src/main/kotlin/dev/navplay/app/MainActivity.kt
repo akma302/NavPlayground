@@ -5,32 +5,24 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
-import dagger.hilt.android.AndroidEntryPoint
+import androidx.compose.runtime.CompositionLocalProvider
 import dev.navplay.app.navigation.AppNavigation
-import dev.navplay.app.navigation.NavigatorImpl
-import dev.navplay.core.navigation.BackStackCodec
 import dev.navplay.core.navigation.DeepLinkSource
-import dev.navplay.core.navigation.NavEntryContributor
 import dev.navplay.core.navigation.NavigationCommand
-import dev.navplay.core.navigation.NavigationLog
 import dev.navplay.feature.feed.api.FeedNavKey
-import javax.inject.Inject
+import dev.zacsweers.metrox.viewmodel.LocalMetroViewModelFactory
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject lateinit var navigator: NavigatorImpl
-
-    @Inject lateinit var contributors: Set<@JvmSuppressWildcards NavEntryContributor>
-
-    @Inject lateinit var codec: BackStackCodec
-
-    @Inject lateinit var log: NavigationLog
+    private val graph get() = (application as PlaygroundApp).appGraph
+    private val navigator get() = graph.navigator
+    private val codec get() = graph.codec
+    private val log get() = graph.log
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Поворот экрана: Singleton-навигатор жив, стек не пуст — восстанавливать нечего.
+        // Поворот экрана: Навигатор из AppGraph жив, стек не пуст — восстанавливать нечего.
         // Смерть процесса: навигатор новый и пустой — поднимаем стек из Bundle (все NavKey сериализуемы).
         if (savedInstanceState != null && navigator.backStack.isEmpty()) {
             savedInstanceState.getString(STATE_BACKSTACK)
@@ -44,7 +36,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
-                AppNavigation(navigator = navigator, contributors = contributors)
+                CompositionLocalProvider(LocalMetroViewModelFactory provides graph.metroViewModelFactory) {
+                    AppNavigation(navigator = navigator, contributors = graph.contributors)
+                }
             }
         }
     }
