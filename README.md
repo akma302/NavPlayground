@@ -4,6 +4,12 @@ Playground для подготовки к собеседованию: много
 из шпаргалки. Откройте в Android Studio (нужна версия, поддерживающая AGP 9.4), запустите `:app` — на главном
 экране кнопки для каждого механизма, а внизу **журнал навигации**, где видно, что сделала цепочка middleware.
 
+## Роль main
+
+main — входная ветка репозитория и будущий четвёртый вариант с manual DI.
+Пока код остаётся исходной Hilt-версией; Hilt отдельно сохранён в di/hilt.
+Остальные реализации развиваются независимо в di/koin и di/metro.
+
 ## Граф модулей
 
 ```
@@ -20,6 +26,24 @@ Playground для подготовки к собеседованию: много
 
 Правила: `impl` → чужие `api` и `core`, **никогда** чужой `impl`; `core` не знает ни одной фичи;
 `:app` — единственный, кто видит все `impl`.
+В Metro-варианте `app` и feature `impl` также используют `core:di` с общим маркером AppScope.
+
+## Реализации DI и схемы архитектуры
+
+| Реализация | Ветка | Статус | Визуализация |
+|---|---|---|---|
+| Hilt | `di/hilt`, исходная `main` | Реализован; текущий вариант | [Граф Hilt](docs/di/hilt.md) |
+| Metro 1.4.5 | `di/metro` | Реализован | [Граф Metro](docs/di/metro.md) |
+| Koin 4.2.2 | `di/koin` | Реализован | [Граф Koin](docs/di/koin.md) |
+
+В [атласе DI](docs/di/README.md) собраны общая схема навигационных вкладов, сравнение времени жизни
+объектов и подробные схемы каждой реализации со ссылками на код. Диаграммы Mermaid отображаются на GitHub.
+
+В этой ветке используется Hilt: Application и Activity — Android entry points,
+фичи вносят зависимости через Hilt-модули и @IntoSet. ViewModel создаются Hilt-фабрикой.
+
+Назначение документов: этот README — обзор, запуск и тесты; [AGENTS.md](AGENTS.md) — правила работы;
+[WORK_CONTEXT.md](docs/WORK_CONTEXT.md) — актуальный статус, проверки и дальнейшие шаги.
 
 ## Где что лежит (карта «вопрос интервьюера → код»)
 
@@ -31,7 +55,7 @@ Playground для подготовки к собеседованию: много
 | Feature flags → заглушка | `core/.../middleware/FeatureFlagMiddleware.kt`, `StubNavKey.kt` |
 | Аналитика / throttling / логирование | `core/.../middleware/{Analytics,Throttling,Logging}Middleware.kt` |
 | Бэкстек как `SnapshotStateList`, очередь команд | `app/.../navigation/NavigatorImpl.kt` |
-| Регистрация экранов через DI (`@IntoSet`) | `*NavigationModule.kt` в каждой `impl`, `NavEntryContributor.kt` |
+| Регистрация экранов через DI | `*NavigationModule.kt` в каждой `impl`, `NavEntryContributor.kt` |
 | `NavDisplay`, ViewModel на запись стека, fallback-entry | `app/.../navigation/AppNavigation.kt` |
 | Типизированные результаты (`ResultKey<T>`, `forResult`) | `Navigator.kt`, `NavigatorImpl.kt`, `feature/media/*`, `FeedViewModel.pickMedia` |
 | Deep links: handler → resolver → тот же пайплайн | `DeepLink.kt`, `DeepLinkValidationMiddleware.kt`, `DeepLinkResolutionMiddleware.kt` |
@@ -58,7 +82,8 @@ Deep link становится обычным `Forward` на шаге Resolution
    а вызывающий получит `NotNavigated`. «Cancel» на экране выбора даёт `Cancelled`.
 4. **Deep links**: внешний `navplay://profile/42` (пройдёт через guard), `navplay://auth` (отклонён: не `exported`),
    `https://evil.example/...` (отклонён: схема не в allowlist).
-5. **Process death**: «Don't keep activities» в настройках разработчика → сверните и вернитесь, стек восстановится.
+5. **Process death**: отправьте приложение в фон, завершите его процесс и вернитесь через список
+   недавних приложений. «Не сохранять действия» проверяет пересоздание Activity, а не смерть процесса.
 
 Внешняя ссылка с компьютера:
 
@@ -79,7 +104,7 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 
 ## Честные слабые места схемы (спросят на собесе)
 
-- Boilerplate: на 3 фичах 3 модуля на фичу — overkill; окупается с ростом числа команд.
+- Отдельные api/impl и DI-регистрации добавляют код; польза становится заметнее при росте проекта.
 - Неявность мультибайндингов: ловится `NavigationGraphTest` и fallback-entry.
 - Отладка цепочки сложнее прямого вызова: поэтому есть `LoggingMiddleware` и журнал на экране.
 - Ожидающие результаты (`forResult`) живут в памяти и не переживают смерть процесса — после неё экран-результат
@@ -88,12 +113,9 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 
 ## Статус проверки
 
-Проверено запуском (Kotlin 2.0.21, coroutines 1.6.4, JUnit 4.13.2 на заглушках Android-классов):
-логика core, `NavigatorImpl`, все middleware, ViewModel, обработчики deep link — 82 теста зелёные,
-намеренно внесённые в навигатор ошибки тесты ловят.
+2026-10-20: `./gradlew :app:assembleDebug testDebugUnitTest --console=plain` — успешно,
+Исходная Hilt-версия успешно прошла assembleDebug и JVM-тесты перед миграциями.
+Синхронизация документации не меняет код и не является новым запуском тестов.
+Проверка UI на устройстве/эмуляторе и release-сборка не выполнялись.
 
-**Не проверялось сборкой**: Gradle sync, Hilt/KSP, Compose-экраны, `NavDisplay`, сериализация (`BackStackCodecTest`,
-`NavigationGraphTest`) — в окружении, где писался проект, не было доступа к Google/Maven. Версии в
-`gradle/libs.versions.toml` взяты из официальных страниц релизов, но их совместимость между собой (KSP ↔ Kotlin,
-Hilt ↔ AGP 9, имена API Navigation 3) не проверена. Если sync ругается — начните с этого файла.
-AGP 9.4.0 требует Gradle 9.6.0 (прописан в wrapper) и JDK 17+.
+Gradle 9.6.0 задан в wrapper; `gradle/gradle-daemon-jvm.properties` выбирает JDK 25 для daemon.
