@@ -6,9 +6,9 @@ Playground для подготовки к собеседованию: много
 
 ## Роль main
 
-main — входная ветка репозитория и будущий четвёртый вариант с manual DI.
-Пока код остаётся исходной Hilt-версией; Hilt отдельно сохранён в di/hilt.
-Остальные реализации развиваются независимо в di/koin и di/metro.
+main — входная ветка репозитория и реализация **manual DI** без DI-фреймворка.
+Она служит явным вариантом для сравнения с Hilt, Koin и Metro в отдельных ветках.
+Исходный Hilt сохранён в di/hilt; реализации не сливаются друг в друга автоматически.
 
 ## Граф модулей
 
@@ -26,21 +26,24 @@ main — входная ветка репозитория и будущий че
 
 Правила: `impl` → чужие `api` и `core`, **никогда** чужой `impl`; `core` не знает ни одной фичи;
 `:app` — единственный, кто видит все `impl`.
-В Metro-варианте `app` и feature `impl` также используют `core:di` с общим маркером AppScope.
+В manual-варианте `app` и feature `impl` также используют `core:di` с фабрикой ViewModel
+и Compose helper. В Metro-ветке одноимённый модуль содержит общий маркер AppScope.
 
 ## Реализации DI и схемы архитектуры
 
 | Реализация | Ветка | Статус | Визуализация |
 |---|---|---|---|
-| Hilt | `di/hilt`, исходная `main` | Реализован; текущий вариант | [Граф Hilt](docs/di/hilt.md) |
+| Manual DI | `main` | Реализован; текущий вариант | [Граф Manual](docs/di/manual.md) |
+| Hilt | `di/hilt` | Реализован | [Граф Hilt](docs/di/hilt.md) |
 | Metro 1.4.5 | `di/metro` | Реализован | [Граф Metro](docs/di/metro.md) |
 | Koin 4.2.2 | `di/koin` | Реализован | [Граф Koin](docs/di/koin.md) |
 
 В [атласе DI](docs/di/README.md) собраны общая схема навигационных вкладов, сравнение времени жизни
 объектов и подробные схемы каждой реализации со ссылками на код. Диаграммы Mermaid отображаются на GitHub.
 
-В этой ветке используется Hilt: Application и Activity — Android entry points,
-фичи вносят зависимости через Hilt-модули и @IntoSet. ViewModel создаются Hilt-фабрикой.
+В этой ветке Application хранит один AppContainer. Он явно создаёт общие зависимости,
+коллекции навигационных вкладов и карту функций создания ViewModel. ManualViewModelFactory
+и стандартный AndroidX ViewModelStore сохраняют время жизни ViewModel по записи навигации.
 
 Назначение документов: этот README — обзор, запуск и тесты; [AGENTS.md](AGENTS.md) — правила работы;
 [WORK_CONTEXT.md](docs/WORK_CONTEXT.md) — актуальный статус, проверки и дальнейшие шаги.
@@ -100,6 +103,8 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 - `app`: `NavigatorImplTest` — навигатор на **настоящих** `AuthMiddleware` и обработчиках deep link
   (стек, auth-redirect, внешние ссылки, результаты, отмена, падение middleware); `NavigationGraphTest` —
   «у каждого NavKey есть entry» и «каждый NavKey переживает process death» (лечит неявность DI-мультибайндингов);
+- `app`: `ManualGraphTest` — production AppContainer, полнота регистраций, фабрика всех ViewModel,
+  ViewModelStore, общая сессия, middleware, cleanup и отсутствующая регистрация;
 - каждая фича: тесты ViewModel на `FakeNavigator` и контрактные тесты своих deep link.
 
 ## Честные слабые места схемы (спросят на собесе)
@@ -113,9 +118,8 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 
 ## Статус проверки
 
-2026-10-20: `./gradlew :app:assembleDebug testDebugUnitTest --console=plain` — успешно,
-Исходная Hilt-версия успешно прошла assembleDebug и JVM-тесты перед миграциями.
-Синхронизация документации не меняет код и не является новым запуском тестов.
+2026-10-20: `./gradlew clean :app:assembleDebug testDebugUnitTest --console=plain` — успешно,
+93 JVM-теста, без ошибок; создан debug APK. Проверены ручной контейнер и ViewModel factory.
 Проверка UI на устройстве/эмуляторе и release-сборка не выполнялись.
 
 Gradle 9.6.0 задан в wrapper; `gradle/gradle-daemon-jvm.properties` выбирает JDK 25 для daemon.

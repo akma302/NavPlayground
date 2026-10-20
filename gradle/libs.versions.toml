@@ -1,18 +1,12 @@
-# Версии сверены 2026-10-12 по официальным страницам релизов (developer.android.com,
-# kotlinlang.org, GitHub dagger/ksp). Совместимость конкретных пар (KSP <-> Kotlin,
-# activity-compose, coroutines, serialization) в этой среде НЕ проверялась сборкой.
-# Если Gradle sync ругается — начинай с этого файла.
+# Manual DI: no DI framework or annotation processor.
 
 [versions]
 agp = "9.4.0"
 kotlin = "2.4.21"
-ksp = "2.3.11"
-hilt = "2.60.1"
 
 composeBom = "2026.09.00"
 navigation3 = "1.2.0"
 lifecycle = "2.11.0"
-androidxHilt = "1.4.0"
 activityCompose = "1.10.1"
 
 coroutines = "1.10.2"
@@ -25,8 +19,6 @@ android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref 
 kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-composeGradlePlugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
 kotlin-serializationGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
-ksp-gradlePlugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp" }
-hilt-gradlePlugin = { module = "com.google.dagger:hilt-android-gradle-plugin", version.ref = "hilt" }
 
 # --- Compose ---
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -43,10 +35,6 @@ androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecy
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
 
-# --- Hilt ---
-hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
-hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
-androidx-hilt-lifecycle-viewmodel-compose = { module = "androidx.hilt:hilt-lifecycle-viewmodel-compose", version.ref = "androidxHilt" }
 
 # --- Kotlin libs / tests ---
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }

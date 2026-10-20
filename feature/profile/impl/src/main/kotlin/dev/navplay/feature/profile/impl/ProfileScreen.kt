@@ -13,13 +13,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import dev.navplay.core.di.manualViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun ProfileScreen(
     userId: String,
-    viewModel: ProfileViewModel = hiltViewModel(),
+    viewModel: ProfileViewModel = manualViewModel(),
 ) {
     val session by viewModel.session.collectAsStateWithLifecycle()
     val nextId = ((userId.toIntOrNull() ?: 0) + 1).toString()

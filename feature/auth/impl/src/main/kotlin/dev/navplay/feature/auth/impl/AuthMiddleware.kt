@@ -8,7 +8,6 @@ import dev.navplay.core.navigation.targetKey
 import dev.navplay.core.navigation.withTargetKey
 import dev.navplay.feature.auth.api.AuthNavKey
 import dev.navplay.feature.auth.api.SessionManager
-import javax.inject.Inject
 
 /**
  * Auth-guard: «как открыть экран, требующий авторизации?».
@@ -17,7 +16,7 @@ import javax.inject.Inject
  * а исходный ключ кладём в `returnTo`. После логина экран входа делает `Replace(returnTo)`.
  * Тип команды сохраняется (Forward остаётся Forward, Replace — Replace).
  */
-class AuthMiddleware @Inject constructor(
+class AuthMiddleware(
     private val sessions: SessionManager,
     private val log: NavigationLog,
 ) : NavigationMiddleware {

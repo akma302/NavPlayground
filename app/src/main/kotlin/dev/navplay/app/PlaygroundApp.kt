@@ -1,7 +1,8 @@
 package dev.navplay.app
 
 import android.app.Application
-import dagger.hilt.android.HiltAndroidApp
+import dev.navplay.app.di.AppContainer
 
-@HiltAndroidApp
-class PlaygroundApp : Application()
+class PlaygroundApp : Application() {
+    val appContainer: AppContainer by lazy { AppContainer() }
+}

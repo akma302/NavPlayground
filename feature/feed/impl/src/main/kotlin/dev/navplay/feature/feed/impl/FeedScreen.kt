@@ -21,11 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import dev.navplay.core.di.manualViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun FeedScreen(viewModel: FeedViewModel = hiltViewModel()) {
+fun FeedScreen(viewModel: FeedViewModel = manualViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold { padding ->

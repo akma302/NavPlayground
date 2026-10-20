@@ -24,13 +24,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import dev.navplay.core.di.manualViewModel
 import dev.navplay.feature.media.api.MediaPickerNavKey
 
 @Composable
 fun MediaPickerScreen(
     key: MediaPickerNavKey,
-    viewModel: MediaPickerViewModel = hiltViewModel(),
+    viewModel: MediaPickerViewModel = manualViewModel(),
 ) {
     var selected by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
 

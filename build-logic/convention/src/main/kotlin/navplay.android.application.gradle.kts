@@ -4,8 +4,6 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.devtools.ksp")
-    id("com.google.dagger.hilt.android")
 }
 
 android {
@@ -23,6 +21,7 @@ android {
 }
 
 dependencies {
+    "implementation"(project(":core:di"))
     "implementation"(platform(libs.lib("androidx-compose-bom")))
     "implementation"(libs.lib("androidx-compose-ui"))
     "implementation"(libs.lib("androidx-compose-foundation"))
@@ -30,8 +29,6 @@ dependencies {
     "implementation"(libs.lib("androidx-activity-compose"))
     "implementation"(libs.lib("androidx-lifecycle-runtime-compose"))
 
-    "implementation"(libs.lib("hilt-android"))
-    "ksp"(libs.lib("hilt-compiler"))
 
     "testImplementation"(libs.lib("junit"))
     "testImplementation"(libs.lib("kotlinx-coroutines-test"))

@@ -14,7 +14,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false // playground: правила R8 для Hilt/serialization не пишем
+            isMinifyEnabled = false // playground: минификацию отдельно не настраиваем
         }
     }
 }
@@ -28,8 +28,9 @@ dependencies {
     implementation(project(":feature:profile:impl"))
     implementation(project(":feature:media:impl"))
 
-    // Из api-модулей нужен только стартовый ключ.
+    // Composition root uses the start key and the shared session contract.
     implementation(project(":feature:feed:api"))
+    implementation(project(":feature:auth:api"))
 
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)

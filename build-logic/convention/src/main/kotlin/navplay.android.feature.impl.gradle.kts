@@ -4,7 +4,6 @@
 plugins {
     id("navplay.android.library")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
 }
 
 android {
@@ -14,6 +13,7 @@ android {
 }
 
 dependencies {
+    "implementation"(project(":core:di"))
     "implementation"(project(":core:navigation"))
 
     "implementation"(platform(libs.lib("androidx-compose-bom")))
@@ -23,7 +23,4 @@ dependencies {
     "implementation"(libs.lib("androidx-lifecycle-runtime-compose"))
     "implementation"(libs.lib("androidx-lifecycle-viewmodel-compose"))
 
-    "implementation"(libs.lib("hilt-android"))
-    "implementation"(libs.lib("androidx-hilt-lifecycle-viewmodel-compose"))
-    "ksp"(libs.lib("hilt-compiler"))
 }
