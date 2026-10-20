@@ -20,6 +20,25 @@ Playground для подготовки к собеседованию: много
 
 Правила: `impl` → чужие `api` и `core`, **никогда** чужой `impl`; `core` не знает ни одной фичи;
 `:app` — единственный, кто видит все `impl`.
+В Metro-варианте `app` и feature `impl` также используют `core:di` с общим маркером AppScope.
+
+## Реализации DI и схемы архитектуры
+
+| Реализация | Ветка | Статус | Визуализация |
+|---|---|---|---|
+| Hilt | `di/hilt`, исходная `main` | Реализован | [Граф Hilt](docs/di/hilt.md) |
+| Metro 1.4.5 | `di/metro` | Реализован | [Граф Metro](docs/di/metro.md) |
+| Koin 4.2.2 | `di/koin` | Реализован; текущий вариант | [Граф Koin](docs/di/koin.md) |
+
+В [атласе DI](docs/di/README.md) собраны общая схема навигационных вкладов, сравнение времени жизни
+объектов и подробные схемы каждой реализации со ссылками на код. Диаграммы Mermaid отображаются на GitHub.
+
+В этой ветке Application запускает Koin с явным списком appModules; фичи экспортируют DSL-модули.
+Общие объекты — single, ViewModel создаются Koin-фабрикой в ViewModelStore записи навигации.
+Classic DSL используется без compiler plugin; реальная сборка контейнера проверяется тестами.
+
+Назначение документов: этот README — обзор, запуск и тесты; [AGENTS.md](AGENTS.md) — правила работы;
+[WORK_CONTEXT.md](docs/WORK_CONTEXT.md) — актуальный статус, проверки и дальнейшие шаги.
 
 ## Где что лежит (карта «вопрос интервьюера → код»)
 
@@ -75,6 +94,8 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 - `app`: `NavigatorImplTest` — навигатор на **настоящих** `AuthMiddleware` и обработчиках deep link
   (стек, auth-redirect, внешние ссылки, результаты, отмена, падение middleware); `NavigationGraphTest` —
   «у каждого NavKey есть entry» и «каждый NavKey переживает process death» (лечит неявность DI-мультибайндингов);
+- `app`: `KoinGraphTest` — production-модули в изолированном контейнере: identity общих зависимостей,
+  состав коллекций, фабрика всех ViewModel, ViewModelStore, auth/feature flags и закрытие scope;
 - каждая фича: тесты ViewModel на `FakeNavigator` и контрактные тесты своих deep link.
 
 ## Честные слабые места схемы (спросят на собесе)
@@ -88,12 +109,8 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 
 ## Статус проверки
 
-Проверено запуском (Kotlin 2.0.21, coroutines 1.6.4, JUnit 4.13.2 на заглушках Android-классов):
-логика core, `NavigatorImpl`, все middleware, ViewModel, обработчики deep link — 82 теста зелёные,
-намеренно внесённые в навигатор ошибки тесты ловят.
+2026-10-20: `./gradlew :app:assembleDebug testDebugUnitTest --console=plain` — успешно,
+93 JVM-теста, без ошибок. Проверены Koin-контейнер и фабрики; скомпилированы Compose-экраны и Navigation 3; создан debug APK.
+Проверка UI на устройстве/эмуляторе и release-сборка не выполнялись.
 
-**Не проверялось сборкой**: Gradle sync, Hilt/KSP, Compose-экраны, `NavDisplay`, сериализация (`BackStackCodecTest`,
-`NavigationGraphTest`) — в окружении, где писался проект, не было доступа к Google/Maven. Версии в
-`gradle/libs.versions.toml` взяты из официальных страниц релизов, но их совместимость между собой (KSP ↔ Kotlin,
-Hilt ↔ AGP 9, имена API Navigation 3) не проверена. Если sync ругается — начните с этого файла.
-AGP 9.4.0 требует Gradle 9.6.0 (прописан в wrapper) и JDK 17+.
+Gradle 9.6.0 задан в wrapper; `gradle/gradle-daemon-jvm.properties` выбирает JDK 25 для daemon.

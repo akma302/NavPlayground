@@ -2,7 +2,6 @@ package dev.navplay.feature.feed.impl
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.navplay.core.navigation.DeepLinkSource
 import dev.navplay.core.navigation.MutableFeatureFlags
 import dev.navplay.core.navigation.NavigationCommand
@@ -13,7 +12,6 @@ import dev.navplay.feature.auth.api.SessionManager
 import dev.navplay.feature.media.api.MediaId
 import dev.navplay.feature.media.api.MediaPickerNavKey
 import dev.navplay.feature.profile.api.ProfileNavKey
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,8 +38,7 @@ data class DeepLinkDemo(val label: String, val uri: String, val source: DeepLink
  * Экран-«пульт»: на нём можно потрогать каждый механизм навигации и сразу увидеть,
  * что сделала цепочка middleware (журнал внизу).
  */
-@HiltViewModel
-class FeedViewModel @Inject constructor(
+class FeedViewModel(
     private val navigator: Navigator,
     private val sessions: SessionManager,
     private val flags: MutableFeatureFlags,

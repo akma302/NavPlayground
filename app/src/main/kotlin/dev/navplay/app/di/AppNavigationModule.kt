@@ -1,17 +1,10 @@
 package dev.navplay.app.di
 
-import dagger.Binds
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import dagger.multibindings.IntoSet
 import dev.navplay.app.navigation.LogNavigationAnalytics
 import dev.navplay.app.navigation.NavigationScope
 import dev.navplay.app.navigation.NavigatorImpl
 import dev.navplay.app.navigation.StubEntryContributor
 import dev.navplay.core.navigation.BackStackCodec
-import dev.navplay.core.navigation.DeepLinkHandler
 import dev.navplay.core.navigation.DeepLinkResolver
 import dev.navplay.core.navigation.FeatureFlags
 import dev.navplay.core.navigation.InMemoryFeatureFlags
@@ -30,93 +23,41 @@ import dev.navplay.core.navigation.middleware.FeatureFlagMiddleware
 import dev.navplay.core.navigation.middleware.LoggingMiddleware
 import dev.navplay.core.navigation.middleware.ThrottlingMiddleware
 import dev.navplay.core.navigation.navKeys
-import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import org.koin.core.module.Module
+import org.koin.core.qualifier.named
+import org.koin.dsl.bind
+import org.koin.dsl.module
+import org.koin.dsl.onClose
 
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class NavigatorBindingModule {
-    @Binds
-    abstract fun navigator(impl: NavigatorImpl): Navigator
-
-    @Binds
-    @IntoSet
-    abstract fun stubEntries(impl: StubEntryContributor): NavEntryContributor
-}
-
-/**
- * Инфраструктура навигации и «общие» middleware. Auth-middleware сюда не попадает: его вносит сама
- * фича `:feature:auth:impl` (`@IntoSet`), `:app` о нём не знает. Порядок исполнения задаёт `order`.
- */
-@Module
-@InstallIn(SingletonComponent::class)
+/** Common infrastructure. Auth guard is supplied by the auth feature. */
 object AppNavigationModule {
+    val module: Module = module {
+        single { NavigationLog() }
+        single<CoroutineScope>(NavigationScope) {
+            CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        } onClose { it?.cancel() }
+        single<MutableFeatureFlags> { InMemoryFeatureFlags() } bind FeatureFlags::class
+        single<NavigationAnalytics> { LogNavigationAnalytics(get()) }
+        single { DeepLinkResolver(getAll()) }
+        single { BackStackCodec(getAll()) }
+        single { NavigatorImpl(getAll<NavigationMiddleware>().toSet(), get(), get(NavigationScope)) } bind Navigator::class
 
-    @Provides
-    @Singleton
-    fun navigationLog(): NavigationLog = NavigationLog()
+        factory<NavEntryContributor>(named("app.stub.entries")) { StubEntryContributor(get()) }
+        factory<NavKeySerializers>(named("app.stub.serializers")) { stubNavKeySerializers() }
+        factory<NavigationMiddleware>(named("app.logging")) { LoggingMiddleware(get()) }
+        single<NavigationMiddleware>(named("app.throttling")) { ThrottlingMiddleware(get()) }
+        factory<NavigationMiddleware>(named("app.deepLink.validation")) {
+            DeepLinkValidationMiddleware(get(), get(), allowedSchemes = setOf("navplay"))
+        }
+        factory<NavigationMiddleware>(named("app.deepLink.resolution")) { DeepLinkResolutionMiddleware(get(), get()) }
+        factory<NavigationMiddleware>(named("app.featureFlags")) { FeatureFlagMiddleware(get(), get()) }
+        factory<NavigationMiddleware>(named("app.analytics")) { AnalyticsMiddleware(get()) }
+    }
 
-    @Provides
-    @Singleton
-    @NavigationScope
-    fun navigationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-
-    @Provides
-    @Singleton
-    fun mutableFeatureFlags(): MutableFeatureFlags = InMemoryFeatureFlags()
-
-    @Provides
-    fun featureFlags(flags: MutableFeatureFlags): FeatureFlags = flags
-
-    @Provides
-    @Singleton
-    fun analytics(log: NavigationLog): NavigationAnalytics = LogNavigationAnalytics(log)
-
-    @Provides
-    @Singleton
-    fun deepLinkResolver(handlers: Set<@JvmSuppressWildcards DeepLinkHandler>): DeepLinkResolver =
-        DeepLinkResolver(handlers)
-
-    @Provides
-    @Singleton
-    fun backStackCodec(contributions: Set<@JvmSuppressWildcards NavKeySerializers>): BackStackCodec =
-        BackStackCodec(contributions)
-
-    // --- сериализатор ключа заглушки (сам ключ живёт в core, экран — в app) ---
-    @Provides
-    @IntoSet
     fun stubNavKeySerializers(): NavKeySerializers =
         navKeys { subclass(StubNavKey::class, StubNavKey.serializer()) }
-
-    // --- middleware: порядок — по NavigationMiddleware.Order, а не по порядку объявления ---
-    @Provides
-    @IntoSet
-    fun loggingMiddleware(log: NavigationLog): NavigationMiddleware = LoggingMiddleware(log)
-
-    @Provides
-    @IntoSet
-    @Singleton
-    fun throttlingMiddleware(log: NavigationLog): NavigationMiddleware = ThrottlingMiddleware(log)
-
-    @Provides
-    @IntoSet
-    fun deepLinkValidationMiddleware(resolver: DeepLinkResolver, log: NavigationLog): NavigationMiddleware =
-        DeepLinkValidationMiddleware(resolver, log, allowedSchemes = setOf("navplay"))
-
-    @Provides
-    @IntoSet
-    fun deepLinkResolutionMiddleware(resolver: DeepLinkResolver, log: NavigationLog): NavigationMiddleware =
-        DeepLinkResolutionMiddleware(resolver, log)
-
-    @Provides
-    @IntoSet
-    fun featureFlagMiddleware(flags: FeatureFlags, log: NavigationLog): NavigationMiddleware =
-        FeatureFlagMiddleware(flags, log)
-
-    @Provides
-    @IntoSet
-    fun analyticsMiddleware(analytics: NavigationAnalytics): NavigationMiddleware =
-        AnalyticsMiddleware(analytics)
 }

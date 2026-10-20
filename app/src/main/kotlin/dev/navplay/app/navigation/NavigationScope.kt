@@ -1,8 +1,7 @@
 package dev.navplay.app.navigation
 
-import javax.inject.Qualifier
+import org.koin.core.qualifier.Qualifier
+import org.koin.core.qualifier.named
 
-/** Корутин-скоуп навигатора: живёт столько же, сколько процесс, работает на Dispatchers.Main.immediate. */
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class NavigationScope
+/** Qualifier for the process-level navigation CoroutineScope; not a Koin scope. */
+val NavigationScope: Qualifier = named("navigation.coroutines")

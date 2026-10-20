@@ -1,16 +1,13 @@
 package dev.navplay.feature.auth.impl
 
 import androidx.lifecycle.ViewModel
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.navplay.core.navigation.NavKey
 import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.Navigator
 import dev.navplay.feature.auth.api.SessionManager
 import dev.navplay.feature.feed.api.FeedNavKey
-import javax.inject.Inject
 
-@HiltViewModel
-class AuthViewModel @Inject constructor(
+class AuthViewModel(
     private val navigator: Navigator,
     private val sessions: SessionManager,
 ) : ViewModel() {

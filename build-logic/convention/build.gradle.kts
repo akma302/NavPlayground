@@ -8,6 +8,4 @@ dependencies {
     implementation(libs.kotlin.gradlePlugin)
     implementation(libs.kotlin.composeGradlePlugin)
     implementation(libs.kotlin.serializationGradlePlugin)
-    implementation(libs.ksp.gradlePlugin)
-    implementation(libs.hilt.gradlePlugin)
 }

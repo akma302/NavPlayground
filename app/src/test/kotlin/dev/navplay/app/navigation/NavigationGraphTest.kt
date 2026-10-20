@@ -28,7 +28,7 @@ import org.junit.Test
  * без этих тестов узнаешь об этом только в рантайме.
  */
 class NavigationGraphTest {
-    /** Все вклады, которые Hilt соберёт в `Set<NavEntryContributor>`. */
+    /** Ручная проверка контрактов; реальная сборка модулей проверяется в KoinGraphTest. */
     private val contributors: List<NavEntryContributor> = listOf(
         AuthEntryContributor(),
         FeedEntryContributor(),

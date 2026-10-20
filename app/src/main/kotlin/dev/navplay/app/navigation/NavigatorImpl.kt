@@ -9,8 +9,6 @@ import dev.navplay.core.navigation.NavigationPipeline
 import dev.navplay.core.navigation.NavigationResultException
 import dev.navplay.core.navigation.Navigator
 import dev.navplay.core.navigation.ResultKey
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -30,7 +28,6 @@ import kotlinx.coroutines.launch
  * Всё изменение стека происходит на `scope` (в приложении — `Dispatchers.Main.immediate`), поэтому
  * `SnapshotStateList` пишется с main-потока. [forResult] и [finishWithResult] тоже вызываются с него.
  */
-@Singleton
 class NavigatorImpl(
     private val stack: MutableList<NavKey>,
     middleware: Collection<NavigationMiddleware>,
@@ -38,12 +35,11 @@ class NavigatorImpl(
     scope: CoroutineScope,
 ) : Navigator {
 
-    /** Конструктор для Hilt: бэкстек — Compose-состояние, чтобы NavDisplay перерисовывался сам. */
-    @Inject
+    /** Конструктор для DI: бэкстек — Compose-состояние, чтобы NavDisplay перерисовывался сам. */
     constructor(
         middleware: Set<@JvmSuppressWildcards NavigationMiddleware>,
         log: NavigationLog,
-        @NavigationScope scope: CoroutineScope,
+        scope: CoroutineScope,
     ) : this(mutableStateListOf(), middleware, log, scope)
 
     /** Только для чтения снаружи. Читать можно из Compose — подписка на снапшоты работает. */

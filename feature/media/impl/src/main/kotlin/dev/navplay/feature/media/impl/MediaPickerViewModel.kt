@@ -1,12 +1,10 @@
 package dev.navplay.feature.media.impl
 
 import androidx.lifecycle.ViewModel
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.Navigator
 import dev.navplay.feature.media.api.MediaId
 import dev.navplay.feature.media.api.MediaPickerNavKey
-import javax.inject.Inject
 
 /** Чистая логика выбора — отдельно от UI, чтобы тестировать без Compose. */
 object MediaSelection {
@@ -18,8 +16,7 @@ object MediaSelection {
     }
 }
 
-@HiltViewModel
-class MediaPickerViewModel @Inject constructor(
+class MediaPickerViewModel(
     private val navigator: Navigator,
 ) : ViewModel() {
 

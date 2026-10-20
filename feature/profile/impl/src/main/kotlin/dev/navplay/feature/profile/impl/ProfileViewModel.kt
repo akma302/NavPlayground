@@ -1,18 +1,15 @@
 package dev.navplay.feature.profile.impl
 
 import androidx.lifecycle.ViewModel
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.Navigator
 import dev.navplay.feature.auth.api.Session
 import dev.navplay.feature.auth.api.SessionManager
 import dev.navplay.feature.feed.api.FeedNavKey
 import dev.navplay.feature.profile.api.ProfileNavKey
-import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
 
-@HiltViewModel
-class ProfileViewModel @Inject constructor(
+class ProfileViewModel(
     private val navigator: Navigator,
     private val sessions: SessionManager,
 ) : ViewModel() {

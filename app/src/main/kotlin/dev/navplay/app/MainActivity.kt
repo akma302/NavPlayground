@@ -5,7 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
-import dagger.hilt.android.AndroidEntryPoint
 import dev.navplay.app.navigation.AppNavigation
 import dev.navplay.app.navigation.NavigatorImpl
 import dev.navplay.core.navigation.BackStackCodec
@@ -14,18 +13,18 @@ import dev.navplay.core.navigation.NavEntryContributor
 import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.NavigationLog
 import dev.navplay.feature.feed.api.FeedNavKey
-import javax.inject.Inject
+import org.koin.android.ext.android.getKoin
+import org.koin.android.ext.android.inject
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject lateinit var navigator: NavigatorImpl
+    private val navigator: NavigatorImpl by inject()
 
-    @Inject lateinit var contributors: Set<@JvmSuppressWildcards NavEntryContributor>
+    private val contributors by lazy { getKoin().getAll<NavEntryContributor>().toSet() }
 
-    @Inject lateinit var codec: BackStackCodec
+    private val codec: BackStackCodec by inject()
 
-    @Inject lateinit var log: NavigationLog
+    private val log: NavigationLog by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
