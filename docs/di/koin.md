@@ -86,3 +86,5 @@ Koin поддерживает отдельный compiler plugin; в этой р
 [Koin DSL](https://insert-koin.io/docs/reference/koin-core/dsl/) ·
 [Koin Compose](https://insert-koin.io/docs/reference/koin-compose/compose/) ·
 [Сравнение реализаций](README.md)
+
+[Архитектура навигации: от команды до экрана](../navigation.md)
