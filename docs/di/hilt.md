@@ -60,3 +60,5 @@ Hilt управляет Android-точками входа: Application запу�
 - [ViewModelStore на запись навигации](https://github.com/akma302/NavPlayground/blob/a028ebe/app/src/main/kotlin/dev/navplay/app/navigation/AppNavigation.kt)
 
 [Сравнение реализаций](README.md)
+
+[Архитектура навигации: от команды до экрана](../navigation.md)

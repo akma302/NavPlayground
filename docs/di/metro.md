@@ -66,3 +66,5 @@ MetroX также предоставляет карты assisted factories; се
 Scope ставится на injected class/provider, а не на `@Binds`.
 
 [Документация Metro](https://zacsweers.github.io/metro/latest/) · [Сравнение реализаций](README.md)
+
+[Архитектура навигации: от команды до экрана](../navigation.md)

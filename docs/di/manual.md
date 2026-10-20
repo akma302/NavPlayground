@@ -74,3 +74,5 @@ auth/feature flags, cleanup и ошибку отсутствующей реги�
 - [ManualGraphTest](https://github.com/akma302/NavPlayground/blob/21d9b76/app/src/test/kotlin/dev/navplay/app/di/ManualGraphTest.kt)
 
 [Сравнение реализаций](README.md)
+
+[Архитектура навигации: от команды до экрана](../navigation.md)
