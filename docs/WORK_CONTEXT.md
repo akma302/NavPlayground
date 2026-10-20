@@ -1,79 +1,65 @@
 # Контекст работы — 2026-10-20
 
-Это сохранённый снимок для продолжения работы в другой сессии. Перед действиями сверить с Git.
+Снимок для продолжения в другой сессии. Перед действиями сверить ветку, status и log с Git.
 
-## Цель и принятые решения
+## Цель и решения
 
-Сравнить три DI-подхода в одном Android-приложении с Navigation 3, сохранив одинаковое поведение.
+Сравнить Hilt, Koin и Metro в одном Android-приложении с Navigation 3, сохранив поведение.
 Пользователь выбрал отдельные Git-ветки вместо копий проекта и попросил начать с Metro.
-Общую архитектурную абстракцию для переключения DI в одной сборке сейчас не создаём.
-Koin ещё не внедрён; следующий шаг требует учитывать актуальный запрос пользователя.
+Переключение DI в одной сборке сейчас не создаём.
 
-## Репозиторий и ветки
+Описание архитектуры и схемы: [атлас DI](di/README.md),
+[Hilt](di/hilt.md), [Metro](di/metro.md), [Koin — план](di/koin.md).
+Обзор и команды: [README](../README.md). Правила: [AGENTS](../AGENTS.md).
+
+## Репозиторий и состояние
 
 - Origin: https://github.com/akma302/NavPlayground.git
-- `main`, `di/hilt`: исходная Hilt-реализация, коммит `a028ebe`.
-- `di/koin`: пока та же исходная Hilt-реализация, коммит `a028ebe`.
-- `di/metro`: завершённая миграция на Metro 1.4.5, коммит `3e140eb`; отправлен в origin.
-- Работа выполнялась в `di/metro`. Имя ветки не гарантирует, что одноимённый DI уже внедрён:
-  для `di/koin` миграция ещё предстоит.
+- `main`, `di/hilt`: исходная Hilt-реализация, `a028ebe`.
+- `di/koin`: пока тот же Hilt-код, `a028ebe`; Koin ещё не внедрён.
+- `di/metro`: Metro 1.4.5 внедрён коммитом `3e140eb`; сохранение контекста — `ce15f30`.
+  Оба коммита отправлены в origin. Последующие коммиты документации смотреть в `git log`.
+- Добавлены схемы всех трёх DI и разделена документация без дублирования архитектуры.
+  Схемы Hilt/Metro отражают реализацию; схема Koin описывает предложение на Classic DSL,
+  а не готовый код. Версия Koin и использование compiler plugin пока не выбраны.
+- Все новые документы пока находятся в `di/metro`. В другой ветке читать их через
+  `git show di/metro:docs/WORK_CONTEXT.md` и `git show di/metro:docs/di/README.md`.
+  Для удалённой копии сначала получить актуальную ветку обычным fetch.
 
-## Как устроена Metro-версия
+## Проверки
 
-- Convention plugins подключают Metro вместо Hilt/KSP; Dagger/Hilt и `javax.inject` в исходниках удалены.
-- `core:di` содержит общий маркер `AppScope`; не зависит от фич.
-- `app/di/AppGraph.kt`: `@DependencyGraph(AppScope::class)`, наследует `ViewModelGraph`.
-- `PlaygroundApp` лениво создаёт один `AppGraph` через `createGraph<AppGraph>()` на процесс.
-- `MainActivity` получает зависимости из графа Application и передаёт
-  `LocalMetroViewModelFactory` через `CompositionLocalProvider`.
-- `*NavigationModule.kt`: `@BindingContainer`, `@ContributesTo(AppScope::class)`,
-  `@Binds` в виде extension properties и наборы `@IntoSet`.
-- Граф собирает 5 contributors экранов, 7 middleware, 3 deep link handlers и сериализаторы NavKey.
-  Порядок middleware определяется `order`, а не порядком DI-набора.
-- Общие зависимости помечены `@SingleIn(AppScope::class)`. `NavigationScope` — qualifier
-  для process-level CoroutineScope (`SupervisorJob + Dispatchers.Main.immediate`), а не DI scope.
-- ViewModel: `@Inject`, `@ViewModelKey`, `@ContributesIntoMap(AppScope::class)`.
-  `AppViewModelFactory` наследует `MetroViewModelFactory`; экраны используют `metroViewModel()`.
-- Важная деталь API 1.4.5: Compose-функции импортируются из `dev.zacsweers.metrox.viewmodel`,
-  без дополнительного пакета `.compose`. Scope ставится на реализацию/provider, не на `@Binds`.
-- `rememberViewModelStoreNavEntryDecorator` сохраняет время жизни ViewModel по записи бэкстека.
-  ViewModel не кэшируются как singleton приложения.
-
-## Выполненные проверки
-
-До миграции исходная Hilt-версия успешно прошла assembleDebug и JVM-тесты.
-После миграции выполнено:
+До миграции Hilt успешно прошёл assembleDebug и JVM-тесты. После миграции:
 
 ```powershell
 .\gradlew.bat clean :app:assembleDebug testDebugUnitTest --console=plain
 ```
 
-Результат: BUILD SUCCESSFUL, 91 тест, 0 failures/errors; создан
+BUILD SUCCESSFUL, 91 тест, 0 failures/errors; debug APK:
 `app/build/outputs/apk/debug/app-debug.apk`.
 
-Новый `app/.../di/MetroGraphTest.kt` создаёт отдельный сгенерированный проверочный граф
-с production-вкладами. Проверяет identity общих зависимостей, состав наборов,
-регистрации экранов, сериализацию ключей, создание всех четырёх ViewModel,
-разделение экземпляров между ViewModelStore и общую сессию/навигатор.
-`NavigationGraphTest` оставлен как ручной тест контрактов.
+`MetroGraphTest` создаёт отдельный сгенерированный граф с production-вкладами и проверяет
+общие экземпляры, наборы вкладов, сериализацию и фабрику всех четырёх ViewModel.
+Детали и ссылки — в [схеме Metro](di/metro.md).
 
-## Ограничения и дальнейшая работа
+После добавления схем код приложения не менялся. Все четыре Mermaid-диаграммы проверены
+парсером Mermaid 11.12.0; локальные Markdown-ссылки в семи документах и `git diff --check` проверены.
+91 тест — результат проверки миграции, не новый запуск ради документации.
 
-- UI не запускался на устройстве/эмуляторе; release-сборка не проверялась.
-- Следующая полезная проверка Metro: запуск, auth redirect, выбор медиа с результатом,
-  deep links, поворот экрана и восстановление после смерти процесса.
-- Следующая DI-миграция — Koin в `di/koin`, начиная с исходного Hilt, а не с Metro.
-- Общие исправления логики при необходимости переносить между ветками отдельно от DI-изменений.
-- Ожидания результатов навигации находятся в памяти и не переживают смерть процесса —
-  это существующее ограничение, не добавленное миграцией Metro.
+## Что остаётся
+
+- UI на устройстве/эмуляторе и release-сборка не проверялись.
+- Полезная проверка Metro: auth redirect, выбор медиа с результатом, deep links,
+  поворот экрана и восстановление после смерти процесса.
+- Следующая DI-миграция: Koin в `di/koin`, начиная с Hilt, а не с Metro.
+  План схемы уточнить по фактическому коду, затем убрать пометку «план» и проверить сборку/тесты.
+- Общие исправления логики переносить между ветками отдельно от DI-изменений.
+- Ожидания результатов навигации находятся в памяти и не переживают смерть процесса:
+  это существующее ограничение.
 
 ## Среда
 
-Windows / PowerShell. Gradle wrapper 9.6.0; AGP 9.4.0; Kotlin 2.4.21;
-daemon JVM 25 задан в `gradle/gradle-daemon-jvm.properties`.
-Локальный SDK задаётся через игнорируемый `local.properties`.
-Ограниченная среда может потребовать разрешение для Gradle-кеша/сети и Git push.
-GitHub CLI (`gh`) не установлен; обычные Git fetch/push работают через настроенный credential helper.
-
-Официальная документация Metro: https://zacsweers.github.io/metro/latest/
-Подробности устройства приложения: `README.md`.
+Windows / PowerShell; Gradle 9.6.0, AGP 9.4.0, Kotlin 2.4.21.
+Daemon JVM 25 задан в `gradle/gradle-daemon-jvm.properties`;
+SDK — через игнорируемый `local.properties`.
+В ограниченной среде Gradle-кеш/сеть и Git push могут требовать разрешение.
+`gh` не установлен; обычный Git push работает через credential helper.

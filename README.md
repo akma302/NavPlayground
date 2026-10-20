@@ -20,29 +20,24 @@ Playground для подготовки к собеседованию: много
 
 Правила: `impl` → чужие `api` и `core`, **никогда** чужой `impl`; `core` не знает ни одной фичи;
 `:app` — единственный, кто видит все `impl`.
+В Metro-варианте `app` и feature `impl` также используют `core:di` с общим маркером AppScope.
 
-## DI: Metro (ветка `di/metro`)
+## Реализации DI и схемы архитектуры
 
-Используется [Metro](https://zacsweers.github.io/metro/latest/) 1.4.5. Плагины и зависимости Hilt/KSP
-в этой ветке удалены. Исходная реализация сохранена в `di/hilt` и `main`.
+| Реализация | Ветка | Статус | Визуализация |
+|---|---|---|---|
+| Hilt | `di/hilt`, исходная `main` | Реализован | [Граф Hilt](docs/di/hilt.md) |
+| Metro 1.4.5 | `di/metro` | Реализован; текущий вариант | [Граф Metro](docs/di/metro.md) |
+| Koin | `di/koin` | Миграция не начата, в ветке ещё Hilt | [План графа Koin](docs/di/koin.md) |
 
-- `core:di` содержит общий маркер `AppScope`, доступный фичам и `app`.
-- `app/di/AppGraph.kt`: `@DependencyGraph(AppScope::class)` собирает вклады фич при компиляции.
-  `PlaygroundApp` создаёт граф через `createGraph<AppGraph>()` один раз на процесс.
-- `*NavigationModule.kt`: `@BindingContainer` + `@ContributesTo(AppScope::class)` заменяют Hilt-модули.
-  `@Binds` объявляются как extension properties; `@IntoSet` сохраняет наборы экранов, middleware,
-  deep link handlers и сериализаторов. Подключения Gradle-модуля фичи достаточно для обнаружения вкладов.
-- `@SingleIn(AppScope::class)` сохраняет общие экземпляры навигатора, сессии, feature flags,
-  лога, кодека, resolver, аналитики и coroutine scope. `NavigationScope` — qualifier, а не DI scope.
-- ViewModel: `@Inject` + `@ViewModelKey` + `@ContributesIntoMap(AppScope::class)`.
-  `AppViewModelFactory` наследует `MetroViewModelFactory`, а `AppGraph` — `ViewModelGraph`.
-  Activity передаёт фабрику через `LocalMetroViewModelFactory`, экраны вызывают `metroViewModel()`.
-  `rememberViewModelStoreNavEntryDecorator` по-прежнему задаёт время жизни ViewModel по записи стека;
-  ViewModel не являются singleton графа приложения.
+В [атласе DI](docs/di/README.md) собраны общая схема навигационных вкладов, сравнение времени жизни
+объектов и подробные схемы каждой реализации со ссылками на код. Диаграммы Mermaid отображаются на GitHub.
 
-`MetroGraphTest` создаёт сгенерированный граф с production-вкладами и проверяет singleton-привязки,
-все навигационные регистрации и сериализаторы, создание всех четырёх ViewModel, разделение экземпляров
-между ViewModelStore и общую сессию/навигацию. Старый `NavigationGraphTest` оставлен как тест контрактов.
+В Metro-версии Application хранит один AppGraph; фичи вносят зависимости через AppScope,
+а ViewModel создаются Metro-фабрикой и живут в ViewModelStore записи навигации.
+
+Назначение документов: этот README — обзор, запуск и тесты; [AGENTS.md](AGENTS.md) — правила работы;
+[WORK_CONTEXT.md](docs/WORK_CONTEXT.md) — актуальный статус, проверки и дальнейшие шаги.
 
 ## Где что лежит (карта «вопрос интервьюера → код»)
 
@@ -98,6 +93,8 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 - `app`: `NavigatorImplTest` — навигатор на **настоящих** `AuthMiddleware` и обработчиках deep link
   (стек, auth-redirect, внешние ссылки, результаты, отмена, падение middleware); `NavigationGraphTest` —
   «у каждого NavKey есть entry» и «каждый NavKey переживает process death» (лечит неявность DI-мультибайндингов);
+- `app`: `MetroGraphTest` — сгенерированный граф с production-вкладами: identity общих зависимостей,
+  состав наборов, создание всех ViewModel, ViewModelStore и общая сессия/навигация;
 - каждая фича: тесты ViewModel на `FakeNavigator` и контрактные тесты своих deep link.
 
 ## Честные слабые места схемы (спросят на собесе)
