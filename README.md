@@ -67,6 +67,9 @@ main — входная ветка репозитория и реализаци�
 
 ### Как проходит команда
 
+Подробная [архитектура навигации](docs/navigation.md): пять схем — общий поток, middleware,
+deep link с авторизацией, типизированный результат и восстановление бэкстека.
+
 ```
 execute(cmd) ─► очередь ─► Logging(-100) ─► Throttle(0) ─► DeepLinkValidation(10) ─► DeepLinkResolution(15)
                                                                       │ (DeepLink → Forward(key))
