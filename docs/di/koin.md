@@ -76,12 +76,12 @@ Koin поддерживает отдельный compiler plugin; в этой р
 
 ## Привязка к исходникам
 
-- [Запуск Koin](https://github.com/akma302/NavPlayground/blob/di/koin/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
-- [Список appModules](https://github.com/akma302/NavPlayground/blob/di/koin/app/src/main/kotlin/dev/navplay/app/di/AppModules.kt)
-- [Общая инфраструктура](https://github.com/akma302/NavPlayground/blob/di/koin/app/src/main/kotlin/dev/navplay/app/di/AppNavigationModule.kt)
-- [Пример фичи auth](https://github.com/akma302/NavPlayground/blob/di/koin/feature/auth/impl/src/main/kotlin/dev/navplay/feature/auth/impl/AuthNavigationModule.kt)
-- [Получение зависимостей Activity](https://github.com/akma302/NavPlayground/blob/di/koin/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
-- [KoinGraphTest](https://github.com/akma302/NavPlayground/blob/di/koin/app/src/test/kotlin/dev/navplay/app/di/KoinGraphTest.kt)
+- [Запуск Koin](https://github.com/akma302/NavPlayground/blob/aecd89c/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
+- [Список appModules](https://github.com/akma302/NavPlayground/blob/aecd89c/app/src/main/kotlin/dev/navplay/app/di/AppModules.kt)
+- [Общая инфраструктура](https://github.com/akma302/NavPlayground/blob/aecd89c/app/src/main/kotlin/dev/navplay/app/di/AppNavigationModule.kt)
+- [Пример фичи auth](https://github.com/akma302/NavPlayground/blob/aecd89c/feature/auth/impl/src/main/kotlin/dev/navplay/feature/auth/impl/AuthNavigationModule.kt)
+- [Получение зависимостей Activity](https://github.com/akma302/NavPlayground/blob/aecd89c/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
+- [KoinGraphTest](https://github.com/akma302/NavPlayground/blob/aecd89c/app/src/test/kotlin/dev/navplay/app/di/KoinGraphTest.kt)
 
 [Koin DSL](https://insert-koin.io/docs/reference/koin-core/dsl/) ·
 [Koin Compose](https://insert-koin.io/docs/reference/koin-compose/compose/) ·

@@ -50,7 +50,7 @@ Classic DSL используется без compiler plugin; реальная с
 | Feature flags → заглушка | `core/.../middleware/FeatureFlagMiddleware.kt`, `StubNavKey.kt` |
 | Аналитика / throttling / логирование | `core/.../middleware/{Analytics,Throttling,Logging}Middleware.kt` |
 | Бэкстек как `SnapshotStateList`, очередь команд | `app/.../navigation/NavigatorImpl.kt` |
-| Регистрация экранов через DI (`@IntoSet`) | `*NavigationModule.kt` в каждой `impl`, `NavEntryContributor.kt` |
+| Регистрация экранов через DI | `*NavigationModule.kt` в каждой `impl`, `NavEntryContributor.kt` |
 | `NavDisplay`, ViewModel на запись стека, fallback-entry | `app/.../navigation/AppNavigation.kt` |
 | Типизированные результаты (`ResultKey<T>`, `forResult`) | `Navigator.kt`, `NavigatorImpl.kt`, `feature/media/*`, `FeedViewModel.pickMedia` |
 | Deep links: handler → resolver → тот же пайплайн | `DeepLink.kt`, `DeepLinkValidationMiddleware.kt`, `DeepLinkResolutionMiddleware.kt` |
@@ -77,7 +77,8 @@ Deep link становится обычным `Forward` на шаге Resolution
    а вызывающий получит `NotNavigated`. «Cancel» на экране выбора даёт `Cancelled`.
 4. **Deep links**: внешний `navplay://profile/42` (пройдёт через guard), `navplay://auth` (отклонён: не `exported`),
    `https://evil.example/...` (отклонён: схема не в allowlist).
-5. **Process death**: «Don't keep activities» в настройках разработчика → сверните и вернитесь, стек восстановится.
+5. **Process death**: отправьте приложение в фон, завершите его процесс и вернитесь через список
+   недавних приложений. «Не сохранять действия» проверяет пересоздание Activity, а не смерть процесса.
 
 Внешняя ссылка с компьютера:
 
@@ -100,7 +101,7 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 
 ## Честные слабые места схемы (спросят на собесе)
 
-- Boilerplate: на 3 фичах 3 модуля на фичу — overkill; окупается с ростом числа команд.
+- Отдельные api/impl и DI-регистрации добавляют код; польза становится заметнее при росте проекта.
 - Неявность мультибайндингов: ловится `NavigationGraphTest` и fallback-entry.
 - Отладка цепочки сложнее прямого вызова: поэтому есть `LoggingMiddleware` и журнал на экране.
 - Ожидающие результаты (`forResult`) живут в памяти и не переживают смерть процесса — после неё экран-результат
