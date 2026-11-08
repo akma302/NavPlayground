@@ -7,7 +7,7 @@
 flowchart TB
     subgraph Build["Сборка: Dagger / Hilt + KSP"]
         Infra["app: AppNavigationModule<br/>NavigatorBindingModule"]
-        Features["auth / feed / profile / media<br/>NavigationModule"]
+        Features["auth / feed / profile / media / requests<br/>NavigationModule"]
         Declarations["@Inject constructor<br/>@HiltViewModel"]
         Compiler["Hilt compiler<br/>проверка и генерация графа"]
         Infra -->|"@Module + @InstallIn"| Compiler
@@ -46,6 +46,7 @@ Hilt управляет Android-точками входа: Application запу�
 
 Фичи сами вносят экран, сериализатор и, где предусмотрено, deep link handler и auth middleware.
 Граф собирает четыре набора; их потребители показаны на [общей схеме](README.md).
+Модуль Requests вносит contributor списка и карточки и сериализаторы через `@Provides @IntoSet`.
 Полная иерархия Hilt-компонентов, включая ActivityRetainedComponent, здесь опущена.
 
 Время жизни ViewModel определяется ViewModelStore записи NavDisplay:
@@ -53,11 +54,12 @@ Hilt управляет Android-точками входа: Application запу�
 
 ## Привязка к исходникам
 
-- [Application и Hilt entry point](https://github.com/akma302/NavPlayground/blob/a028ebe/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
-- [MainActivity: field injection](https://github.com/akma302/NavPlayground/blob/a028ebe/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
-- [Инфраструктура и общие зависимости](https://github.com/akma302/NavPlayground/blob/a028ebe/app/src/main/kotlin/dev/navplay/app/di/AppNavigationModule.kt)
-- [Auth: session binding и вклады фичи](https://github.com/akma302/NavPlayground/blob/a028ebe/feature/auth/impl/src/main/kotlin/dev/navplay/feature/auth/impl/AuthNavigationModule.kt)
-- [ViewModelStore на запись навигации](https://github.com/akma302/NavPlayground/blob/a028ebe/app/src/main/kotlin/dev/navplay/app/navigation/AppNavigation.kt)
+- [Application и Hilt entry point](https://github.com/akma302/NavPlayground/blob/3b6f35f/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
+- [Регистрация Requests](https://github.com/akma302/NavPlayground/blob/3b6f35f/feature/requests/impl/src/main/kotlin/dev/navplay/feature/requests/impl/RequestsNavigationModule.kt)
+- [MainActivity: field injection](https://github.com/akma302/NavPlayground/blob/3b6f35f/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
+- [Инфраструктура и общие зависимости](https://github.com/akma302/NavPlayground/blob/3b6f35f/app/src/main/kotlin/dev/navplay/app/di/AppNavigationModule.kt)
+- [Auth: session binding и вклады фичи](https://github.com/akma302/NavPlayground/blob/3b6f35f/feature/auth/impl/src/main/kotlin/dev/navplay/feature/auth/impl/AuthNavigationModule.kt)
+- [ViewModelStore на запись навигации](https://github.com/akma302/NavPlayground/blob/3b6f35f/app/src/main/kotlin/dev/navplay/app/navigation/AppNavigation.kt)
 
 [Сравнение реализаций](README.md)
 
