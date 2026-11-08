@@ -26,15 +26,17 @@
 | Реализация | Ветка | Статус | Визуализация |
 |---|---|---|---|
 | Manual DI | `main` | Реализован | [Граф Manual](docs/di/manual.md) |
-| Hilt | `di/hilt` | Реализован; текущий вариант | [Граф Hilt](docs/di/hilt.md) |
+| Hilt | `di/hilt` | Реализован | [Граф Hilt](docs/di/hilt.md) |
+| Dagger 2 | `di/dagger` | Реализован. Текущий вариант | [Граф Dagger 2](docs/di/dagger.md) |
 | Metro 1.4.5 | `di/metro` | Реализован | [Граф Metro](docs/di/metro.md) |
 | Koin 4.2.2 | `di/koin` | Реализован | [Граф Koin](docs/di/koin.md) |
 
 В [атласе DI](docs/di/README.md) собраны общая схема навигационных вкладов, сравнение времени жизни
 объектов и подробные схемы каждой реализации со ссылками на код. Диаграммы Mermaid отображаются на GitHub.
 
-В этой ветке используется Hilt: Application и Activity — Android entry points,
-фичи вносят зависимости через Hilt-модули и @IntoSet. ViewModel создаются Hilt-фабрикой.
+В этой ветке используется Dagger 2 с KSP. Application один раз создаёт `DaggerAppComponent`,
+который собирает модули фич, навигационные вклады и провайдеры ViewModel.
+Contributor получает фабрику и запрашивает ViewModel внутри записи Navigation 3.
 
 Назначение документов: этот README — обзор, запуск и тесты; [AGENTS.md](AGENTS.md) — правила работы;
 [WORK_CONTEXT.md](docs/WORK_CONTEXT.md) — актуальный статус, проверки и дальнейшие шаги.
@@ -50,6 +52,7 @@
 | Аналитика / throttling / логирование | `core/.../middleware/{Analytics,Throttling,Logging}Middleware.kt` |
 | Два `SnapshotStateList`, выбор раздела и очередь команд | `app/.../navigation/NavigatorImpl.kt` |
 | Регистрация экранов через DI | `*NavigationModule.kt` в каждой `impl`, `NavEntryContributor.kt` |
+| Сборка графа, `@IntoMap` и создание ViewModel | `AppComponent.kt`, `DaggerViewModelFactory.kt`, `*NavigationModule.kt` |
 | `NavDisplay`, ViewModel на запись стека, fallback-entry | `app/.../navigation/AppNavigation.kt` |
 | Типизированные результаты (`ResultKey<T>`, `forResult`) | `Navigator.kt`, `NavigatorImpl.kt`, `feature/media/*`, `FeedViewModel.pickMedia` |
 | Deep links: handler → resolver → тот же пайплайн | `DeepLink.kt`, `DeepLinkValidationMiddleware.kt`, `DeepLinkResolutionMiddleware.kt` |
@@ -105,8 +108,9 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 - `core/navigation`: порядок цепочки, отмена и подмена команд, throttling (с поддельными часами), флаги,
   валидация и резолв deep link, `UriPattern`, кодек бэкстека (включая повреждённое состояние);
 - `app`: `NavigatorImplTest` — навигатор на **настоящих** `AuthMiddleware` и обработчиках deep link
-  (стек, auth-redirect, внешние ссылки, результаты, отмена, падение middleware); `NavigationGraphTest` —
-  «у каждого NavKey есть entry» и «каждый NavKey переживает process death» (лечит неявность DI-мультибайндингов);
+  (стек, auth-redirect, внешние ссылки, результаты, отмена, падение middleware).
+  `NavigationGraphTest` проверяет сгенерированный `AppComponent`, регистрацию ключей и экранов,
+  фабрику четырёх ViewModel, их владение через ViewModelStore и общую сессию при входе в Requests.
 - фичи с ViewModel используют `FakeNavigator` в тестах. Контрактные тесты проверяют обработчики deep links.
 
 ## Честные слабые места схемы (спросят на собесе)
