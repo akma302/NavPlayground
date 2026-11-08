@@ -6,30 +6,31 @@
 
 | Схема | Статус | Исходная точка |
 |---|---|---|
-| [Manual](manual.md) | Реализован, сборка и 93 теста проходят | `main`, AppContainer |
+| [Manual](manual.md) | Реализован | `main`, AppContainer |
 | [Hilt](hilt.md) | Реализован | `di/hilt`, `a028ebe` |
-| [Metro](metro.md) | Реализован, сборка и 91 тест проходят | `di/metro`, миграция `3e140eb` |
-| [Koin](koin.md) | Реализован, сборка и 93 теста проходят | `di/koin`, Classic DSL 4.2.2 |
+| [Metro](metro.md) | Реализован | `di/metro`, миграция `3e140eb` |
+| [Koin](koin.md) | Реализован | `di/koin`, Classic DSL 4.2.2 |
 
 Подробная [архитектура навигации](../navigation.md) показывает поток команд, middleware,
-deep links, результаты и восстановление состояния — общий для всех четырёх DI-вариантов.
+deep links, результаты, разделы и восстановление состояния. Сборки и тесты описаны в [WORK_CONTEXT](../WORK_CONTEXT.md).
 
 ## Что должно оставаться одинаковым
 
 ```mermaid
 flowchart TB
-    Entries["5 NavEntryContributor"] -->|register| UI["AppNavigation / entryProvider"]
+    Entries["6 NavEntryContributor"] -->|register| UI["AppNavigation / entryProvider"]
     Middlewares["7 NavigationMiddleware"] -->|сортировка по order| Navigator["NavigatorImpl / NavigationPipeline"]
     Handlers["3 DeepLinkHandler"] --> Resolver["DeepLinkResolver"]
-    Serializers["5 NavKeySerializers"] --> Codec["BackStackCodec"]
+    Serializers["6 NavKeySerializers"] --> Codec["BackStackCodec"]
     UI --> Display["NavDisplay"]
-    Navigator -->|бэкстек| Display
+    Navigator -->|выбранный раздел и истории| Display
     Display -->|ViewModelStore на запись| VM["ViewModel экрана"]
     VM -->|команды через Navigator| Navigator
 ```
 
-Числа относятся к текущим четырём фичам и app-заглушке; это не требования фреймворка.
-Обработчика deep link для media нет. У auth есть дополнительный middleware.
+Пять фич и app-заглушка вносят экраны и сериализаторы. Requests регистрирует список и карточку
+одним contributor и сериализаторы обоих ключей одним вкладом. У Requests пока нет ViewModel и deep link.
+У auth есть дополнительный middleware.
 Список middleware: logging, throttling, deep link validation/resolution, feature flags, auth, analytics.
 
 | Время жизни | Manual / main | Hilt | Metro | Koin |

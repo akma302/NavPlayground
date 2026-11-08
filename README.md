@@ -1,8 +1,9 @@
 # NavPlayground — «флагманская» навигация на Navigation 3
 
-Playground для подготовки к собеседованию: многомодульное Android-приложение, где работает каждый механизм
-из шпаргалки. Откройте в Android Studio (нужна версия, поддерживающая AGP 9.4), запустите `:app` — на главном
-экране кнопки для каждого механизма, а внизу **журнал навигации**, где видно, что сделала цепочка middleware.
+Учебный многомодульный Android-проект для подготовки к senior-собеседованию.
+Откройте в Android Studio с поддержкой AGP 9.4 и запустите `:app`. Публичный Home содержит
+диагностический Feed с журналом middleware. Защищённый Requests демонстрирует независимую историю
+раздела на списке и карточке заявки.
 
 ## Роль main
 
@@ -13,15 +14,12 @@ main — входная ветка репозитория и реализаци�
 ## Граф модулей
 
 ```
-                      :app   (composition root: владеет бэкстеком, собирает entry через DI)
-        ┌──────────┬───┴──────┬───────────┐
-   feed:impl  profile:impl  auth:impl  media:impl      ← impl видят только свой api, чужие api и core
-        │          │           │           │
-   feed:api   profile:api   auth:api   media:api       ← @Serializable NavKey + маленькие контракты
-        └──────────┴─────┬─────┴───────────┘
-                  :core:navigation                      ← абстракции, middleware, deep link, кодек бэкстека
-                         ▲
-              :core:navigation-testing                  ← FakeNavigator, MainDispatcherRule (только в тестах)
+:app                                            ← composition root и обе навигационные истории
+  └─ feature/{feed,profile,auth,media,requests}:impl
+       ├─ feature/*:api                         ← @Serializable NavKey и маленькие контракты
+       └─ core:navigation                       ← команды, middleware, deep link, кодек
+            ▲
+       core:navigation-testing                  ← FakeNavigator, MainDispatcherRule (тесты)
 ```
 
 Правила: `impl` → чужие `api` и `core`, **никогда** чужой `impl`; `core` не знает ни одной фичи;
@@ -57,7 +55,7 @@ main — входная ветка репозитория и реализаци�
 | Auth guard + `returnTo` | `feature/auth/impl/.../AuthMiddleware.kt`, `AuthViewModel.kt` |
 | Feature flags → заглушка | `core/.../middleware/FeatureFlagMiddleware.kt`, `StubNavKey.kt` |
 | Аналитика / throttling / логирование | `core/.../middleware/{Analytics,Throttling,Logging}Middleware.kt` |
-| Бэкстек как `SnapshotStateList`, очередь команд | `app/.../navigation/NavigatorImpl.kt` |
+| Два `SnapshotStateList`, выбор раздела и очередь команд | `app/.../navigation/NavigatorImpl.kt` |
 | Регистрация экранов через DI | `*NavigationModule.kt` в каждой `impl`, `NavEntryContributor.kt` |
 | `NavDisplay`, ViewModel на запись стека, fallback-entry | `app/.../navigation/AppNavigation.kt` |
 | Типизированные результаты (`ResultKey<T>`, `forResult`) | `Navigator.kt`, `NavigatorImpl.kt`, `feature/media/*`, `FeedViewModel.pickMedia` |
@@ -67,17 +65,27 @@ main — входная ветка репозитория и реализаци�
 
 ### Как проходит команда
 
-Подробная [архитектура навигации](docs/navigation.md): пять схем — общий поток, middleware,
-deep link с авторизацией, типизированный результат и восстановление бэкстека.
+Подробная [архитектура навигации](docs/navigation.md) охватывает команды, middleware,
+deep link с авторизацией, результаты, восстановление и независимые истории.
 
 ```
 execute(cmd) ─► очередь ─► Logging(-100) ─► Throttle(0) ─► DeepLinkValidation(10) ─► DeepLinkResolution(15)
                                                                       │ (DeepLink → Forward(key))
-             ─► FeatureFlags(20) ─► Auth(30) ─► Analytics(40) ─► dispatch: меняет бэкстек
+             ─► FeatureFlags(20) ─► Auth(30) ─► Analytics(40) ─► dispatch: меняет историю или выбор
 ```
 
 Deep link становится обычным `Forward` на шаге Resolution, поэтому дальше он проходит те же флаги, auth-guard
 и аналитику, что и внутренний переход.
+
+## Что попробовать с двумя разделами
+
+1. Выберите **Requests** без входа. **Cancel** вернёт вас на предыдущий экран Home.
+2. Выберите **Requests** ещё раз, войдите и откройте заявку. Перейдите на **Home** и обратно.
+   Откроется та же карточка.
+3. Повторно нажмите выбранную вкладку **Requests**, чтобы вернуться к списку.
+   Системный Back на списке переключит на **Home**.
+4. В **Home** нажмите **Log out**. При следующем входе Requests начнётся со списка.
+   При повороте текущая карточка сохраняется, а при смерти процесса закрытая история недоступна гостю.
 
 ## Что попробовать на экране Feed
 
@@ -108,7 +116,7 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
   «у каждого NavKey есть entry» и «каждый NavKey переживает process death» (лечит неявность DI-мультибайндингов);
 - `app`: `ManualGraphTest` — production AppContainer, полнота регистраций, фабрика всех ViewModel,
   ViewModelStore, общая сессия, middleware, cleanup и отсутствующая регистрация;
-- каждая фича: тесты ViewModel на `FakeNavigator` и контрактные тесты своих deep link.
+- фичи с ViewModel используют `FakeNavigator` в тестах. Контрактные тесты проверяют обработчики deep links.
 
 ## Честные слабые места схемы (спросят на собесе)
 
@@ -122,8 +130,6 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 
 ## Статус проверки
 
-2026-10-20: `./gradlew clean :app:assembleDebug testDebugUnitTest --console=plain` — успешно,
-93 JVM-теста, без ошибок; создан debug APK. Проверены ручной контейнер и ViewModel factory.
-Проверка UI на устройстве/эмуляторе и release-сборка не выполнялись.
+Сборки, JVM-тесты и пройденные шаги на эмуляторе перечислены в [WORK_CONTEXT](docs/WORK_CONTEXT.md).
 
 Gradle 9.6.0 задан в wrapper; `gradle/gradle-daemon-jvm.properties` выбирает JDK 25 для daemon.

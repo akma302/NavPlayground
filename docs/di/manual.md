@@ -8,7 +8,7 @@ flowchart TB
     Container["AppContainer<br/>явные вызовы конструкторов"]
     Builders["AppNavigationModule<br/>обычные Kotlin-функции создания"]
     Shared["val в AppContainer<br/>navigator, sessions, flags, log<br/>resolver, codec, analytics, coroutine scope"]
-    Contributions["Явные setOf<br/>5 entries / 7 middleware<br/>3 handlers / 5 serializers"]
+    Contributions["Явные setOf<br/>6 entries / 7 middleware<br/>3 handlers / 6 serializers"]
     Factory["ManualViewModelFactory<br/>Map: KClass → creation lambda"]
     Activity["MainActivity<br/>application.appContainer"]
     Local["LocalManualViewModelFactory<br/>CompositionLocalProvider"]
@@ -34,15 +34,16 @@ flowchart TB
 
 Application хранит один AppContainer на процесс. Общие зависимости являются обычными `val`:
 один и тот же NavigatorImpl передаётся всем ViewModel как Navigator, одна SessionManager —
-auth/profile/feed и auth middleware. Кеширования по аннотациям и поиска в runtime-реестре нет.
+auth/profile/feed, auth middleware и навигатор. Навигатор использует сессию для logout
+и проверки доступа перед восстановлением историй.
 
 AppNavigationModule — имя обычного объекта с Kotlin-функциями. В нём нет `@Module` или DI DSL;
 сам он не определяет время жизни объектов. AppContainer вызывает helpers один раз и хранит результат.
 Порядок и состав графа видны в коде; создание навигатора происходит после его middleware.
 
-Фичи предоставляют классы contributors/handlers и helpers сериализации. Новую фичу нужно явно
-добавить в соответствующие `setOf` и в карту фабрик ViewModel в AppContainer.
-Здесь нет автоматического обнаружения вкладов по classpath.
+Фичи предоставляют классы contributors/handlers и helpers сериализации. AppContainer явно
+подключает вклад Requests в наборы entries и serializers. Карта ViewModel содержит фабрики
+четырёх фич, у которых есть ViewModel.
 
 ## ViewModel и время жизни
 
@@ -66,12 +67,12 @@ ManualGraphTest создаёт настоящий AppContainer и проверя
 auth/feature flags, cleanup и ошибку отсутствующей регистрации.
 Компилятор проверяет обычные вызовы конструкторов; полнота ручных регистраций проверяется тестами.
 
-- [AppContainer](https://github.com/akma302/NavPlayground/blob/21d9b76/app/src/main/kotlin/dev/navplay/app/di/AppContainer.kt)
-- [Application](https://github.com/akma302/NavPlayground/blob/21d9b76/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
-- [MainActivity](https://github.com/akma302/NavPlayground/blob/21d9b76/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
-- [ManualViewModelFactory](https://github.com/akma302/NavPlayground/blob/21d9b76/core/di/src/main/kotlin/dev/navplay/core/di/ManualViewModelFactory.kt)
-- [Compose helper](https://github.com/akma302/NavPlayground/blob/21d9b76/core/di/src/main/kotlin/dev/navplay/core/di/ManualViewModel.kt)
-- [ManualGraphTest](https://github.com/akma302/NavPlayground/blob/21d9b76/app/src/test/kotlin/dev/navplay/app/di/ManualGraphTest.kt)
+- [AppContainer](https://github.com/akma302/NavPlayground/blob/65ca61c/app/src/main/kotlin/dev/navplay/app/di/AppContainer.kt)
+- [Application](https://github.com/akma302/NavPlayground/blob/65ca61c/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
+- [MainActivity](https://github.com/akma302/NavPlayground/blob/65ca61c/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
+- [ManualViewModelFactory](https://github.com/akma302/NavPlayground/blob/65ca61c/core/di/src/main/kotlin/dev/navplay/core/di/ManualViewModelFactory.kt)
+- [Compose helper](https://github.com/akma302/NavPlayground/blob/65ca61c/core/di/src/main/kotlin/dev/navplay/core/di/ManualViewModel.kt)
+- [ManualGraphTest](https://github.com/akma302/NavPlayground/blob/65ca61c/app/src/test/kotlin/dev/navplay/app/di/ManualGraphTest.kt)
 
 [Сравнение реализаций](README.md)
 
