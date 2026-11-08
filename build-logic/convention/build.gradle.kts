@@ -9,5 +9,4 @@ dependencies {
     implementation(libs.kotlin.composeGradlePlugin)
     implementation(libs.kotlin.serializationGradlePlugin)
     implementation(libs.ksp.gradlePlugin)
-    implementation(libs.hilt.gradlePlugin)
 }

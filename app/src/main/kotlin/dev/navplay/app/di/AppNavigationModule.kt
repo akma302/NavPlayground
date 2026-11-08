@@ -3,8 +3,6 @@ package dev.navplay.app.di
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
 import dev.navplay.app.navigation.LogNavigationAnalytics
 import dev.navplay.app.navigation.NavigationScope
@@ -36,7 +34,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 @Module
-@InstallIn(SingletonComponent::class)
 abstract class NavigatorBindingModule {
     @Binds
     abstract fun navigator(impl: NavigatorImpl): Navigator
@@ -51,7 +48,6 @@ abstract class NavigatorBindingModule {
  * фича `:feature:auth:impl` (`@IntoSet`), `:app` о нём не знает. Порядок исполнения задаёт `order`.
  */
 @Module
-@InstallIn(SingletonComponent::class)
 object AppNavigationModule {
 
     @Provides

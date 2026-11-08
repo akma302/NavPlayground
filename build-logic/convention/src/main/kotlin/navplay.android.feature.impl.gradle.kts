@@ -23,7 +23,6 @@ dependencies {
     "implementation"(libs.lib("androidx-lifecycle-runtime-compose"))
     "implementation"(libs.lib("androidx-lifecycle-viewmodel-compose"))
 
-    "implementation"(libs.lib("hilt-android"))
-    "implementation"(libs.lib("androidx-hilt-lifecycle-viewmodel-compose"))
-    "ksp"(libs.lib("hilt-compiler"))
+    "implementation"(libs.lib("dagger-runtime"))
+    "ksp"(libs.lib("dagger-compiler"))
 }

@@ -1,11 +1,14 @@
 package dev.navplay.feature.auth.impl
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.EntryProviderScope
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.ClassKey
+import dagger.multibindings.IntoMap
 import dagger.multibindings.IntoSet
 import dev.navplay.core.navigation.DeepLinkHandler
 import dev.navplay.core.navigation.NavEntryContributor
@@ -19,17 +22,23 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** Фича сама вносит себя в граф: экран, middleware, deep link и сериализатор ключа. */
-class AuthEntryContributor @Inject constructor() : NavEntryContributor {
+class AuthEntryContributor @Inject constructor(
+    private val factory: ViewModelProvider.Factory,
+) : NavEntryContributor {
     override fun register(scope: EntryProviderScope<NavKey>) {
         scope.entry<AuthNavKey> { key ->
-            AuthScreen(returnTo = key.returnTo, selectSection = key.selectSection)
+            AuthScreen(key.returnTo, key.selectSection, viewModel(factory = factory))
         }
     }
 }
 
 @Module
-@InstallIn(SingletonComponent::class)
 abstract class AuthNavigationModule {
+    @Binds
+    @IntoMap
+    @ClassKey(AuthViewModel::class)
+    abstract fun viewModel(impl: AuthViewModel): ViewModel
+
     @Binds
     @Singleton
     abstract fun sessionManager(impl: InMemorySessionManager): SessionManager

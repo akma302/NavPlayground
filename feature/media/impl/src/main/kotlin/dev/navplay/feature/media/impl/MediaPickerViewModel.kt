@@ -1,7 +1,6 @@
 package dev.navplay.feature.media.impl
 
 import androidx.lifecycle.ViewModel
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.Navigator
 import dev.navplay.feature.media.api.MediaId
@@ -18,7 +17,6 @@ object MediaSelection {
     }
 }
 
-@HiltViewModel
 class MediaPickerViewModel @Inject constructor(
     private val navigator: Navigator,
 ) : ViewModel() {

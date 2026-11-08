@@ -2,7 +2,6 @@ package dev.navplay.feature.feed.impl
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.navplay.core.navigation.DeepLinkSource
 import dev.navplay.core.navigation.MutableFeatureFlags
 import dev.navplay.core.navigation.NavigationCommand
@@ -40,7 +39,6 @@ data class DeepLinkDemo(val label: String, val uri: String, val source: DeepLink
  * Экран-«пульт»: на нём можно потрогать каждый механизм навигации и сразу увидеть,
  * что сделала цепочка middleware (журнал внизу).
  */
-@HiltViewModel
 class FeedViewModel @Inject constructor(
     private val navigator: Navigator,
     private val sessions: SessionManager,

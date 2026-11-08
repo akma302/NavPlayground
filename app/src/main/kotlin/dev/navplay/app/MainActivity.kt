@@ -5,28 +5,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
-import dagger.hilt.android.AndroidEntryPoint
 import dev.navplay.app.navigation.AppNavigation
 import dev.navplay.app.navigation.AppSection
 import dev.navplay.app.navigation.SectionHistory
-import dev.navplay.app.navigation.NavigatorImpl
-import dev.navplay.core.navigation.BackStackCodec
 import dev.navplay.core.navigation.DeepLinkSource
-import dev.navplay.core.navigation.NavEntryContributor
 import dev.navplay.core.navigation.NavigationCommand
-import dev.navplay.core.navigation.NavigationLog
-import javax.inject.Inject
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject lateinit var navigator: NavigatorImpl
-
-    @Inject lateinit var contributors: Set<@JvmSuppressWildcards NavEntryContributor>
-
-    @Inject lateinit var codec: BackStackCodec
-
-    @Inject lateinit var log: NavigationLog
+    private val component get() = (application as PlaygroundApp).component
+    private val navigator get() = component.navigator
+    private val codec get() = component.codec
+    private val log get() = component.log
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +35,7 @@ class MainActivity : ComponentActivity() {
         // Холодный старт по ссылке. При пересоздании активити ссылку повторно не обрабатываем.
         if (savedInstanceState == null) handleDeepLink(intent)
 
+        val contributors = component.contributors
         setContent {
             MaterialTheme {
                 AppNavigation(navigator = navigator, contributors = contributors)

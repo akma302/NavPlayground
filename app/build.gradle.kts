@@ -14,7 +14,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false // playground: правила R8 для Hilt/serialization не пишем
+            isMinifyEnabled = false // playground: debug и JVM-тесты — основной путь проверки
         }
     }
 }

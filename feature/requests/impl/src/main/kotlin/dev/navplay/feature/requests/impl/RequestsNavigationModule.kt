@@ -3,8 +3,6 @@ package dev.navplay.feature.requests.impl
 import androidx.navigation3.runtime.EntryProviderScope
 import dagger.Module
 import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
 import dev.navplay.core.navigation.NavEntryContributor
 import dev.navplay.core.navigation.NavKey
@@ -27,7 +25,6 @@ class RequestsEntryContributor(private val navigator: Navigator) : NavEntryContr
 }
 
 @Module
-@InstallIn(SingletonComponent::class)
 object RequestsNavigationModule {
     @Provides
     @IntoSet

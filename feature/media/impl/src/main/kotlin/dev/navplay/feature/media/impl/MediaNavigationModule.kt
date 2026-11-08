@@ -1,11 +1,14 @@
 package dev.navplay.feature.media.impl
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.EntryProviderScope
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.ClassKey
+import dagger.multibindings.IntoMap
 import dagger.multibindings.IntoSet
 import dev.navplay.core.navigation.NavEntryContributor
 import dev.navplay.core.navigation.NavKey
@@ -14,15 +17,21 @@ import dev.navplay.core.navigation.navKeys
 import dev.navplay.feature.media.api.MediaPickerNavKey
 import javax.inject.Inject
 
-class MediaEntryContributor @Inject constructor() : NavEntryContributor {
+class MediaEntryContributor @Inject constructor(
+    private val factory: ViewModelProvider.Factory,
+) : NavEntryContributor {
     override fun register(scope: EntryProviderScope<NavKey>) {
-        scope.entry<MediaPickerNavKey> { key -> MediaPickerScreen(key = key) }
+        scope.entry<MediaPickerNavKey> { key -> MediaPickerScreen(key, viewModel(factory = factory)) }
     }
 }
 
 @Module
-@InstallIn(SingletonComponent::class)
 abstract class MediaNavigationModule {
+    @Binds
+    @IntoMap
+    @ClassKey(MediaPickerViewModel::class)
+    abstract fun viewModel(impl: MediaPickerViewModel): ViewModel
+
     @Binds
     @IntoSet
     abstract fun entries(impl: MediaEntryContributor): NavEntryContributor

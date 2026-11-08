@@ -19,13 +19,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.navplay.core.navigation.NavKey
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 @Composable
 fun AuthScreen(
     returnTo: NavKey?,
     selectSection: Boolean = false,
-    viewModel: AuthViewModel = hiltViewModel(),
+    viewModel: AuthViewModel,
 ) {
     var name by rememberSaveable { mutableStateOf("Ada") }
 
