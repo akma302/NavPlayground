@@ -13,12 +13,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.navplay.core.di.manualViewModel
+import dev.navplay.core.di.rememberEntryState
 import dev.navplay.core.navigation.NavKey
 
 @Composable
@@ -27,7 +26,7 @@ fun AuthScreen(
     selectSection: Boolean = false,
     viewModel: AuthViewModel = manualViewModel(),
 ) {
-    var name by rememberSaveable { mutableStateOf("Ada") }
+    var name by rememberEntryState("sign-in.name", "Ada")
 
     Scaffold { padding ->
         Column(

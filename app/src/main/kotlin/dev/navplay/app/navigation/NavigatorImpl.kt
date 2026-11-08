@@ -1,9 +1,6 @@
 package dev.navplay.app.navigation
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import com.arkivanov.decompose.ComponentContext
 import dev.navplay.core.navigation.NavKey
 import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.NavigationLog
@@ -29,10 +26,11 @@ import kotlinx.coroutines.launch
  * Как это работает:
  * 1. [execute] кладёт команду в очередь и возвращается сразу;
  * 2. один воркер берёт команды по одной (строгий порядок, нет гонок) и прогоняет через цепочку middleware;
- * 3. [dispatch] применяет итоговую команду к нужной истории. [initialize] загружает начальное состояние.
+ * 3. [dispatch] публикует следующее состояние в Decompose. Изменение раздела и очистка обеих
+ *    историй при выходе применяются одной транзакцией.
  *
- * Всё изменение стека происходит на `scope` (в приложении — `Dispatchers.Main.immediate`), поэтому
- * `SnapshotStateList` пишется с main-потока. [forResult] и [finishWithResult] тоже вызываются с него.
+ * Очередь и ожидания результата живут в приложении, а Decompose-роутер принадлежит Activity.
+ * Между хостами хранится только снимок маршрутов, без ссылки на уничтоженную Activity.
  */
 class NavigatorImpl(
     middleware: Set<NavigationMiddleware>,
@@ -41,20 +39,14 @@ class NavigatorImpl(
     private val sessions: SessionManager,
 ) : Navigator {
 
-    private val home = mutableStateListOf<NavKey>()
-    private val requests = mutableStateListOf<NavKey>()
-    var selectedSection by mutableStateOf(AppSection.Home)
-        private set
+    private var router: DecomposeRouter? = null
+    private var detachedState: SectionNavState? = null
+    private val state get() = checkNotNull(router?.state ?: detachedState) { "Attach the navigator before use" }
 
-    private val stack get() = mutableStack(selectedSection)
-    val backStack: List<NavKey> get() = stack
+    val selectedSection: AppSection get() = state.selected
+    val backStack: List<NavKey> get() = backStack(selectedSection)
 
-    fun backStack(section: AppSection): List<NavKey> = mutableStack(section)
-
-    private fun mutableStack(section: AppSection): MutableList<NavKey> = when (section) {
-        AppSection.Home -> home
-        AppSection.Requests -> requests
-    }
+    fun backStack(section: AppSection): List<NavKey> = state.stack(section).map(RouteEntry::key)
 
     private class Request(
         val command: NavigationCommand? = null,
@@ -106,25 +98,57 @@ class NavigatorImpl(
     // ---------------------------------------------------------------- Хуки для :app
 
     /**
-     * При повороте process-scoped навигатор уже жив. При холодном старте Bundle содержит маршруты,
-     * но не доказывает право их открыть. В гостевой сессии восстанавливаем только публичный
-     * префикс Home: экран после защищённого родителя тоже может зависеть от его контекста.
+     * Bundle содержит маршруты, но не доказывает право их открыть. При холодном гостевом старте
+     * оставляем публичный префикс Home до того, как Decompose создаст дочерние компоненты.
      */
-    internal fun initialize(saved: SectionHistory? = null) {
-        if (home.isNotEmpty()) return
+    internal fun createRouter(
+        context: ComponentContext,
+        saved: SectionHistory? = null,
+        entryIds: LongArray? = null,
+    ): DecomposeRouter = DecomposeRouter(context, detachedState ?: restoredState(saved, entryIds))
 
-        val authorized = sessions.isAuthorized
-        val savedHome = saved?.home?.takeIf { it.firstOrNull() == AppSection.Home.root }
-            ?: listOf(AppSection.Home.root)
-        home.addAll(if (authorized) savedHome else savedHome.takeWhile { it !is RequiresAuth })
-
-        if (authorized && saved != null && saved.requests.firstOrNull() == AppSection.Requests.root) {
-            requests.addAll(saved.requests)
-            selectedSection = saved.selected
-        }
+    internal fun attach(host: DecomposeRouter) {
+        detachedState?.takeIf { it != host.state }?.let(host::navigate)
+        router = host
+        detachedState = null
     }
 
-    internal fun saveHistory() = SectionHistory(selectedSection, home.toList(), requests.toList())
+    internal fun detach(host: DecomposeRouter) {
+        if (router !== host) return
+        detachedState = host.state
+        router = null
+    }
+
+    private fun restoredState(saved: SectionHistory?, entryIds: LongArray?): SectionNavState {
+        val authorized = sessions.isAuthorized
+        val savedHome = saved?.home?.takeIf { it.firstOrNull() == AppSection.Home.root }
+        val home = savedHome ?: listOf(AppSection.Home.root)
+        val requests = saved?.requests.orEmpty().takeIf {
+            authorized && it.firstOrNull() == AppSection.Requests.root
+        }.orEmpty()
+        // ID сохраняется вместе с ключом, чтобы Compose нашёл rememberSaveable после смерти процесса.
+        // Старый Bundle без ID всё ещё восстанавливает маршруты.
+        val ids = entryIds?.takeIf { values ->
+            savedHome != null && values.size == 1 + savedHome.size + saved?.requests.orEmpty().size &&
+                values.drop(1).all { it > 0 && it < values.first() } &&
+                values.toSet().size == values.size
+        }
+        var nextId = ids?.first() ?: 1L
+        val visibleHome = if (authorized) home else home.takeWhile { it !is RequiresAuth }
+        return SectionNavState(
+            selected = if (requests.isNotEmpty()) saved?.selected ?: AppSection.Home else AppSection.Home,
+            home = visibleHome.mapIndexed { i, key -> RouteEntry(ids?.get(1 + i) ?: nextId++, key) },
+            requests = requests.mapIndexed { i, key ->
+                RouteEntry(ids?.get(1 + home.size + i) ?: nextId++, key)
+            },
+            nextId = nextId,
+        )
+    }
+
+    internal fun saveHistory() = SectionHistory(selectedSection, backStack(AppSection.Home), backStack(AppSection.Requests))
+
+    internal fun saveEntryIds(): LongArray =
+        longArrayOf(state.nextId) + (state.home + state.requests).map(RouteEntry::id).toLongArray()
 
     /** Завершается, когда все поставленные ранее команды обработаны. Нужно тестам и отладке. */
     suspend fun awaitIdle() {
@@ -151,7 +175,7 @@ class NavigatorImpl(
         }
         request.resultKey?.let { key ->
             val waiter = pending[key]
-            if (waiter != null && stack.lastOrNull() != key) {
+            if (waiter != null && backStack.lastOrNull() != key) {
                 // Команда не дошла до стека в исходном виде: её отбросили или заменили (auth, флаги…).
                 pending.remove(key)
                 waiter.completeExceptionally(NavigationResultException.NotNavigated(key))
@@ -161,6 +185,30 @@ class NavigatorImpl(
 
     /** Очередь задаёт порядок даже между выбором раздела, Back и очисткой при logout. */
     private fun dispatch(command: NavigationCommand) {
+        val current = state
+        var selected = current.selected
+        var nextId = current.nextId
+        val home = current.home.toMutableList()
+        val requests = current.requests.toMutableList()
+        val removed = mutableListOf<RouteEntry>()
+        fun sectionStack(section: AppSection) = if (section == AppSection.Home) home else requests
+        fun popTo(stack: MutableList<RouteEntry>, size: Int) {
+            while (stack.size > size) removed += stack.removeAt(stack.lastIndex)
+        }
+        fun push(stack: MutableList<RouteEntry>, key: NavKey) {
+            stack += RouteEntry(nextId++, key)
+        }
+        fun selectSection(section: AppSection) {
+            val target = sectionStack(section)
+            if (section == selected) {
+                popTo(target, 1)
+            } else {
+                if (target.isEmpty()) push(target, section.root)
+                selected = section
+            }
+        }
+
+        val stack = sectionStack(selected)
         val targetSection = AppSection.entries.firstOrNull { it.root == command.targetKey }
         when (command) {
             is NavigationCommand.SelectSection -> {
@@ -168,7 +216,7 @@ class NavigatorImpl(
                 if (command.fromSignIn) {
                     // Back мог уже отменить вход. Не переключаем раздел по запоздавшему продолжению.
                     val signIn = AuthNavKey(returnTo = command.key, selectSection = true)
-                    if (stack.lastOrNull() != signIn) return
+                    if (stack.lastOrNull()?.key != signIn) return
                     popTo(stack, stack.size - 1)
                 }
                 selectSection(section)
@@ -179,45 +227,45 @@ class NavigatorImpl(
                 // Requests может быть не на экране. Очистка только активного стека показала бы
                 // карточку предыдущей сессии при следующем входе.
                 popTo(requests, 0)
-                if (home.firstOrNull() == AppSection.Home.root) {
+                if (home.firstOrNull()?.key == AppSection.Home.root) {
                     popTo(home, 1)
                 } else {
                     popTo(home, 0)
-                    home.add(AppSection.Home.root)
+                    push(home, AppSection.Home.root)
                 }
-                selectedSection = AppSection.Home
+                selected = AppSection.Home
             }
 
             is NavigationCommand.Forward -> {
-                if (targetSection == null) stack.add(command.key) else selectSection(targetSection)
+                if (targetSection == null) push(stack, command.key) else selectSection(targetSection)
             }
 
             is NavigationCommand.Replace -> {
                 if (targetSection == null) {
                     // Корень раздела — точка Back и повторного выбора. Replace не убирает его.
                     if (stack.size > 1) popTo(stack, stack.size - 1)
-                    stack.add(command.key)
+                    push(stack, command.key)
                 } else {
                     selectSection(targetSection)
                 }
             }
 
             is NavigationCommand.NewRoot -> {
-                val section = targetSection ?: selectedSection
-                val target = mutableStack(section)
+                val section = targetSection ?: selected
+                val target = sectionStack(section)
                 popTo(target, 0)
-                target.add(command.key)
-                selectedSection = section
+                push(target, command.key)
+                selected = section
             }
 
             NavigationCommand.Back -> {
                 if (stack.size > 1) {
                     popTo(stack, stack.size - 1)
-                } else if (selectedSection == AppSection.Requests) {
+                } else if (selected == AppSection.Requests) {
                     // Back от корня ведёт к стартовому разделу, а не повторяет историю тапов.
-                    selectedSection = AppSection.Home
+                    selected = AppSection.Home
                 } else {
-                    log.log("nav", "Back ignored: ${stack.lastOrNull()} is the root")
+                    log.log("nav", "Back ignored: ${stack.lastOrNull()?.key} is the root")
                 }
             }
 
@@ -225,14 +273,14 @@ class NavigatorImpl(
                 // Существующий переход из профиля к Feed работает и после внешней ссылки,
                 // открывшей профиль поверх «Заявок».
                 val target = if (command.key == AppSection.Home.root) home else stack
-                val index = target.lastIndexOf(command.key)
+                val index = target.indexOfLast { it.key == command.key }
                 val keep = if (command.inclusive) index else index + 1
                 when {
                     index < 0 -> log.log("nav", "BackTo ignored: ${command.key} is not in the stack")
                     keep == 0 -> log.log("nav", "BackTo ignored: it would leave the stack empty")
                     else -> {
                         popTo(target, keep)
-                        if (target === home) selectedSection = AppSection.Home
+                        if (target === home) selected = AppSection.Home
                     }
                 }
             }
@@ -240,25 +288,12 @@ class NavigatorImpl(
             is NavigationCommand.DeepLink ->
                 log.log("nav", "unresolved ${command.uri} reached the stack (DeepLinkResolutionMiddleware missing?)")
         }
-    }
-
-    private fun selectSection(section: AppSection) {
-        val target = mutableStack(section)
-        if (section == selectedSection) {
-            // Повторный выбор — явное намерение вернуться к корню. Оставляем ту же запись,
-            // чтобы её ViewModel и сохранённое состояние не пришлось создавать заново.
-            popTo(target, 1)
-        } else {
-            if (target.isEmpty()) target.add(section.root)
-            selectedSection = section
+        val next = SectionNavState(selected, home, requests, nextId)
+        if (next == current) return
+        removed.forEach { entry ->
+            pending.remove(entry.key)?.completeExceptionally(NavigationResultException.Cancelled(entry.key))
         }
-    }
-
-    /** Оставляет в стеке первые [size] экранов; ждущие результата убранные экраны получают `Cancelled`. */
-    private fun popTo(stack: MutableList<NavKey>, size: Int) {
-        while (stack.size > size) {
-            val removed = stack.removeAt(stack.lastIndex)
-            pending.remove(removed)?.completeExceptionally(NavigationResultException.Cancelled(removed))
-        }
+        val host = router
+        if (host == null) detachedState = next else host.navigate(next)
     }
 }

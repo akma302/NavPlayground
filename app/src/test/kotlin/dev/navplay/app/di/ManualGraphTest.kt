@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.navigation3.runtime.entryProvider
-import dev.navplay.core.navigation.NavKey
+import dev.navplay.app.navigation.attachTestRouter
 import dev.navplay.core.navigation.NavigationCommand
+import dev.navplay.core.navigation.ScreenRegistry
 import dev.navplay.core.navigation.StubNavKey
 import dev.navplay.core.navigation.testing.MainDispatcherRule
 import dev.navplay.feature.auth.api.AuthNavKey
@@ -58,10 +58,8 @@ class ManualGraphTest {
             RequestsNavKey, RequestDetailsNavKey("REQ-101"), AuthNavKey(RequestsNavKey, selectSection = true),
             StubNavKey(feature = "media_picker", reason = "disabled"),
         )
-        val provider = entryProvider<NavKey>(fallback = { error("Missing entry: $it") }) {
-            container.contributors.forEach { it.register(this) }
-        }
-        keys.forEach { assertNotNull(provider(it)) }
+        val registry = ScreenRegistry(container.contributors)
+        keys.forEach { assertNotNull(registry[it]) }
         assertEquals(keys, container.codec.decode(container.codec.encode(keys)))
     }
 
@@ -78,7 +76,7 @@ class ManualGraphTest {
         store.clear()
         assertNotSame(profile, first[ProfileViewModel::class])
 
-        container.navigator.initialize()
+        container.navigator.attachTestRouter()
         other[AuthViewModel::class].signIn("manual-user", null)
         assertEquals("manual-user", container.sessions.session.value?.userName)
         assertEquals("manual-user", otherProfile.session.value?.userName)
@@ -87,7 +85,7 @@ class ManualGraphTest {
 
     @Test fun `auth and feature flag middleware use the same services as viewmodels`() = runTest {
         val navigator = container.navigator
-        navigator.initialize()
+        navigator.attachTestRouter()
         val target = ProfileNavKey("42")
         navigator.execute(NavigationCommand.Forward(target))
         navigator.awaitIdle()

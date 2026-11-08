@@ -1,5 +1,5 @@
 plugins {
-    id("navplay.android.library")
+    id("navplay.android.compose.library")
 }
 
 android {
@@ -7,11 +7,9 @@ android {
 }
 
 dependencies {
-    // EntryProviderScope (для NavEntryContributor) приходит из navigation3-runtime.
-    api(libs.androidx.navigation3.runtime)
     api(libs.kotlinx.serialization.json)
     api(libs.kotlinx.coroutines.core)
 
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.runtime)
+    api(platform(libs.androidx.compose.bom))
+    api(libs.androidx.compose.runtime)
 }

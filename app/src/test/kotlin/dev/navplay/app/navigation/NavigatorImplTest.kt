@@ -1,5 +1,9 @@
 package dev.navplay.app.navigation
 
+import com.arkivanov.decompose.DecomposeSettings
+import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+
 import dev.navplay.core.navigation.DeepLinkResolver
 import dev.navplay.core.navigation.DeepLinkSource
 import dev.navplay.core.navigation.InMemoryFeatureFlags
@@ -36,6 +40,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -59,7 +65,7 @@ class NavigatorImplTest {
             FeatureFlagMiddleware(flags, log),
             AuthMiddleware(sessions, log),
         ) + extra
-        return NavigatorImpl(middleware.toSet(), log, scope, sessions).also { it.initialize(saved) }
+        return NavigatorImpl(middleware.toSet(), log, scope, sessions).also { it.attachTestRouter(saved) }
     }
 
     @After
@@ -403,17 +409,22 @@ class NavigatorImplTest {
     }
 
     @Test
-    fun `cold restoration with a valid session keeps both stacks and selection, reinitialization is ignored`() {
+    fun `cold restoration keeps both stacks and recreating the host uses the live snapshot`() {
         sessions.login("ada")
         val saved = SectionHistory(
             selected = AppSection.Requests,
             home = listOf(FeedNavKey, ProfileNavKey("1")),
             requests = listOf(RequestsNavKey, RequestDetailsNavKey("REQ-101")),
         )
-        val nav = navigator(saved = saved)
-        nav.initialize(saved.copy(selected = AppSection.Home, requests = emptyList()))
+        val nav = navigator()
+        val router = nav.attachTestRouter(saved, longArrayOf(30, 1, 7, 9, 20))
+        val ids = nav.saveEntryIds().toList()
+        nav.detach(router)
+        nav.attachTestRouter(saved.copy(selected = AppSection.Home, requests = emptyList()))
 
         assertEquals(saved, nav.saveHistory())
+        assertEquals(listOf(30L, 1L, 7L, 9L, 20L), ids)
+        assertEquals(ids, nav.saveEntryIds().toList())
     }
 
     @Test
@@ -427,4 +438,32 @@ class NavigatorImplTest {
 
         assertEquals(SectionHistory(AppSection.Home, listOf(FeedNavKey, picker), emptyList()), nav.saveHistory())
     }
+
+    @Test
+    fun `equal keys can open separate children and switching retains both owners`() = runBlocking {
+        sessions.login("ada")
+        val nav = navigator()
+        val router = nav.attachTestRouter()
+        val profile = ProfileNavKey("1")
+        nav.run(NavigationCommand.Forward(profile))
+        val first = router.screens.value.displayStack().active.instance.owner
+        nav.run(NavigationCommand.Forward(profile))
+        val second = router.screens.value.displayStack().active.instance.owner
+        assertNotSame(first, second)
+
+        nav.run(NavigationCommand.SelectSection(RequestsNavKey))
+        nav.run(NavigationCommand.SelectSection(FeedNavKey))
+        assertSame(second, router.screens.value.displayStack().active.instance.owner)
+        nav.run(NavigationCommand.Back)
+        assertSame(first, router.screens.value.displayStack().active.instance.owner)
+    }
+}
+
+internal fun NavigatorImpl.attachTestRouter(
+    saved: SectionHistory? = null,
+    ids: LongArray? = null,
+): DecomposeRouter {
+    // JVM-тесты работают без Android Looper. Продакшен по-прежнему проверяет главный поток.
+    DecomposeSettings.settings = DecomposeSettings.settings.copy(mainThreadCheckEnabled = false)
+    return createRouter(DefaultComponentContext(LifecycleRegistry()), saved, ids).also(::attach)
 }

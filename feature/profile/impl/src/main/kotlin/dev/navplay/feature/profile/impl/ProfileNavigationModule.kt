@@ -1,15 +1,14 @@
 package dev.navplay.feature.profile.impl
 
-import androidx.navigation3.runtime.EntryProviderScope
 import dev.navplay.core.navigation.NavEntryContributor
-import dev.navplay.core.navigation.NavKey
+import dev.navplay.core.navigation.ScreenRegistry
 import dev.navplay.core.navigation.NavKeySerializers
 import dev.navplay.core.navigation.navKeys
 import dev.navplay.feature.profile.api.ProfileNavKey
 
 class ProfileEntryContributor() : NavEntryContributor {
-    override fun register(scope: EntryProviderScope<NavKey>) {
-        scope.entry<ProfileNavKey> { key -> ProfileScreen(userId = key.userId) }
+    override fun register(scope: ScreenRegistry) {
+        scope.entry(ProfileNavKey::class) { key -> ProfileScreen(userId = key.userId) }
     }
 }
 

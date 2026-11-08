@@ -1,10 +1,10 @@
 package dev.navplay.app.navigation
 
-import androidx.navigation3.runtime.entryProvider
 import dev.navplay.app.di.AppNavigationModule
 import dev.navplay.core.navigation.BackStackCodec
 import dev.navplay.core.navigation.NavEntryContributor
 import dev.navplay.core.navigation.NavKey
+import dev.navplay.core.navigation.ScreenRegistry
 import dev.navplay.core.navigation.StubNavKey
 import dev.navplay.core.navigation.testing.FakeNavigator
 import dev.navplay.feature.auth.api.AuthNavKey
@@ -57,13 +57,8 @@ class NavigationGraphTest {
 
     @Test
     fun `every NavKey has an entry`() {
-        val provider = entryProvider<NavKey>(
-            fallback = { key -> error("No entry registered for $key") },
-        ) {
-            contributors.forEach { it.register(this) }
-        }
-
-        sampleKeys.forEach { key -> assertNotNull(provider(key)) }
+        val registry = ScreenRegistry(contributors)
+        sampleKeys.forEach { key -> assertNotNull("Missing entry: $key", registry[key]) }
     }
 
     @Test

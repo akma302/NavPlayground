@@ -1,8 +1,7 @@
 package dev.navplay.app.navigation
 
-import androidx.navigation3.runtime.EntryProviderScope
 import dev.navplay.core.navigation.NavEntryContributor
-import dev.navplay.core.navigation.NavKey
+import dev.navplay.core.navigation.ScreenRegistry
 import dev.navplay.core.navigation.NavigationAnalytics
 import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.NavigationLog
@@ -13,8 +12,8 @@ import dev.navplay.core.navigation.StubNavKey
 class StubEntryContributor(
     private val navigator: Navigator,
 ) : NavEntryContributor {
-    override fun register(scope: EntryProviderScope<NavKey>) {
-        scope.entry<StubNavKey> { key ->
+    override fun register(scope: ScreenRegistry) {
+        scope.entry(StubNavKey::class) { key ->
             PlaceholderScreen(
                 title = "Feature unavailable",
                 text = "'${key.feature}': ${key.reason}",

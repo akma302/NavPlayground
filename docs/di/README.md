@@ -7,6 +7,7 @@
 | Схема | Статус | Исходная точка |
 |---|---|---|
 | [Manual](manual.md) | Реализован | `main`, AppContainer |
+| [Manual + Decompose](../navigation.md) | Текущая ветка | `decompose/manual`, AppContainer |
 | [Hilt](hilt.md) | Реализован | `di/hilt`, `a028ebe` |
 | [Dagger 2](dagger.md) | Реализован | `di/dagger`, явный AppComponent |
 | [Metro](metro.md) | Реализован | `di/metro`, миграция `3e140eb` |
@@ -19,11 +20,11 @@ deep links, результаты, разделы и восстановление
 
 ```mermaid
 flowchart TB
-    Entries["6 NavEntryContributor"] -->|register| UI["AppNavigation / entryProvider"]
+    Entries["6 NavEntryContributor"] -->|register| UI["AppNavigation / ScreenRegistry"]
     Middlewares["7 NavigationMiddleware"] -->|сортировка по order| Navigator["NavigatorImpl / NavigationPipeline"]
     Handlers["3 DeepLinkHandler"] --> Resolver["DeepLinkResolver"]
     Serializers["6 NavKeySerializers"] --> Codec["BackStackCodec"]
-    UI --> Display["NavDisplay"]
+    UI --> Display["Compose-экран"]
     Navigator -->|выбранный раздел и истории| Display
     Display -->|ViewModelStore на запись| VM["ViewModel экрана"]
     VM -->|команды через Navigator| Navigator

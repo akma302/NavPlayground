@@ -1,15 +1,14 @@
 package dev.navplay.feature.auth.impl
 
-import androidx.navigation3.runtime.EntryProviderScope
 import dev.navplay.core.navigation.NavEntryContributor
-import dev.navplay.core.navigation.NavKey
+import dev.navplay.core.navigation.ScreenRegistry
 import dev.navplay.core.navigation.NavKeySerializers
 import dev.navplay.core.navigation.navKeys
 import dev.navplay.feature.auth.api.AuthNavKey
 
 class AuthEntryContributor() : NavEntryContributor {
-    override fun register(scope: EntryProviderScope<NavKey>) {
-        scope.entry<AuthNavKey> { key ->
+    override fun register(scope: ScreenRegistry) {
+        scope.entry(AuthNavKey::class) { key ->
             AuthScreen(returnTo = key.returnTo, selectSection = key.selectSection)
         }
     }

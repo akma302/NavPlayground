@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -18,13 +19,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.navplay.core.di.manualViewModel
+import dev.navplay.core.di.rememberEntrySaveable
+import dev.navplay.core.di.rememberEntryState
 import dev.navplay.feature.media.api.MediaPickerNavKey
 
 @Composable
@@ -32,7 +33,8 @@ fun MediaPickerScreen(
     key: MediaPickerNavKey,
     viewModel: MediaPickerViewModel = manualViewModel(),
 ) {
-    var selected by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    var selected by rememberEntryState("media.selected", emptyList<String>())
+    val scroll = rememberEntrySaveable("media.scroll", LazyListState.Saver) { LazyListState() }
 
     Scaffold { padding ->
         Column(
@@ -46,6 +48,7 @@ fun MediaPickerScreen(
             Text("Selected ${selected.size} of ${key.maxCount}")
 
             LazyColumn(
+                state = scroll,
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(vertical = 4.dp),
             ) {

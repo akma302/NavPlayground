@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -22,14 +23,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import dev.navplay.core.di.manualViewModel
+import dev.navplay.core.di.rememberEntrySaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun FeedScreen(viewModel: FeedViewModel = manualViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val scroll = rememberEntrySaveable("feed.scroll", LazyListState.Saver) { LazyListState() }
 
     Scaffold { padding ->
         LazyColumn(
+            state = scroll,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),

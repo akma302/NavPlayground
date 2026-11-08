@@ -34,8 +34,9 @@ dependencies {
     implementation(project(":feature:auth:api"))
     implementation(project(":feature:requests:api"))
 
-    implementation(libs.androidx.navigation3.ui)
-    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+    implementation(libs.decompose.core)
+    implementation(libs.decompose.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.coroutines.android)
 
     // Для тестов NavigatorImpl и графа навигации: настоящие ключи всех фич.

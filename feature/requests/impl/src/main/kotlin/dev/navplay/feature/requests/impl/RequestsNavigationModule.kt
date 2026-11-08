@@ -1,8 +1,7 @@
 package dev.navplay.feature.requests.impl
 
-import androidx.navigation3.runtime.EntryProviderScope
 import dev.navplay.core.navigation.NavEntryContributor
-import dev.navplay.core.navigation.NavKey
+import dev.navplay.core.navigation.ScreenRegistry
 import dev.navplay.core.navigation.NavKeySerializers
 import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.Navigator
@@ -11,11 +10,11 @@ import dev.navplay.feature.requests.api.RequestDetailsNavKey
 import dev.navplay.feature.requests.api.RequestsNavKey
 
 class RequestsEntryContributor(private val navigator: Navigator) : NavEntryContributor {
-    override fun register(scope: EntryProviderScope<NavKey>) {
-        scope.entry<RequestsNavKey> {
+    override fun register(scope: ScreenRegistry) {
+        scope.entry(RequestsNavKey::class) {
             RequestsScreen { id -> navigator.execute(NavigationCommand.Forward(RequestDetailsNavKey(id))) }
         }
-        scope.entry<RequestDetailsNavKey> { key ->
+        scope.entry(RequestDetailsNavKey::class) { key ->
             RequestDetailsScreen(key.id) { navigator.execute(NavigationCommand.Back) }
         }
     }

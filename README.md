@@ -1,15 +1,15 @@
-# NavPlayground — «флагманская» навигация на Navigation 3
+# NavPlayground — Decompose и manual DI
 
 Учебный многомодульный Android-проект для подготовки к senior-собеседованию.
 Откройте в Android Studio с поддержкой AGP 9.4 и запустите `:app`. Публичный Home содержит
 диагностический Feed с журналом middleware. Защищённый Requests демонстрирует независимую историю
 раздела на списке и карточке заявки.
 
-## Роль main
+## Роль decompose/manual
 
-main — входная ветка репозитория и реализация **manual DI** без DI-фреймворка.
-Она служит явным вариантом для сравнения с Hilt, Koin и Metro в отдельных ветках.
-Исходный Hilt сохранён в di/hilt; реализации не сливаются друг в друга автоматически.
+`decompose/manual` создана от `main` для сравнения Decompose 3.5.0 с Navigation 3
+на тех же экранах и с ручным DI. Маршруты, очередь команд и middleware составляют общий
+контракт. Decompose управляет дочерними компонентами, а Compose показывает выбранную историю.
 
 ## Граф модулей
 
@@ -31,7 +31,8 @@ main — входная ветка репозитория и реализаци�
 
 | Реализация | Ветка | Статус | Визуализация |
 |---|---|---|---|
-| Manual DI | `main` | Реализован; текущий вариант | [Граф Manual](docs/di/manual.md) |
+| Manual DI + Decompose | `decompose/manual` | Текущая ветка | [Схема навигации](docs/navigation.md) |
+| Manual DI + Navigation 3 | `main` | База сравнения | [Граф Manual](docs/di/manual.md) |
 | Hilt | `di/hilt` | Реализован | [Граф Hilt](docs/di/hilt.md) |
 | Dagger 2 | `di/dagger` | Реализован | [Граф Dagger 2](docs/di/dagger.md) |
 | Metro 1.4.5 | `di/metro` | Реализован | [Граф Metro](docs/di/metro.md) |
@@ -42,7 +43,8 @@ main — входная ветка репозитория и реализаци�
 
 В этой ветке Application хранит один AppContainer. Он явно создаёт общие зависимости,
 коллекции навигационных вкладов и карту функций создания ViewModel. ManualViewModelFactory
-и стандартный AndroidX ViewModelStore сохраняют время жизни ViewModel по записи навигации.
+и AndroidX ViewModelStore сохраняют время жизни ViewModel по записи навигации.
+Владельца ViewModelStore предоставляет дочерний компонент Decompose.
 
 Назначение документов: этот README — обзор, запуск и тесты; [AGENTS.md](AGENTS.md) — правила работы;
 [WORK_CONTEXT.md](docs/WORK_CONTEXT.md) — актуальный статус, проверки и дальнейшие шаги.
@@ -56,9 +58,9 @@ main — входная ветка репозитория и реализаци�
 | Auth guard + `returnTo` | `feature/auth/impl/.../AuthMiddleware.kt`, `AuthViewModel.kt` |
 | Feature flags → заглушка | `core/.../middleware/FeatureFlagMiddleware.kt`, `StubNavKey.kt` |
 | Аналитика / throttling / логирование | `core/.../middleware/{Analytics,Throttling,Logging}Middleware.kt` |
-| Два `SnapshotStateList`, выбор раздела и очередь команд | `app/.../navigation/NavigatorImpl.kt` |
+| Две истории, выбор раздела и очередь команд | `NavigatorImpl.kt`, `DecomposeRouter.kt` |
 | Регистрация экранов через DI | `*NavigationModule.kt` в каждой `impl`, `NavEntryContributor.kt` |
-| `NavDisplay`, ViewModel на запись стека, fallback-entry | `app/.../navigation/AppNavigation.kt` |
+| Compose-экран, анимация Decompose и Back | `AppNavigation.kt` |
 | Типизированные результаты (`ResultKey<T>`, `forResult`) | `Navigator.kt`, `NavigatorImpl.kt`, `feature/media/*`, `FeedViewModel.pickMedia` |
 | Deep links: handler → resolver → тот же пайплайн | `DeepLink.kt`, `DeepLinkValidationMiddleware.kt`, `DeepLinkResolutionMiddleware.kt` |
 | Process death | `NavKeySerializers.kt` (`BackStackCodec`), `MainActivity.kt` |
@@ -127,7 +129,8 @@ adb shell am start -a android.intent.action.VIEW -d "navplay://profile/42" dev.n
 - Отладка цепочки сложнее прямого вызова: поэтому есть `LoggingMiddleware` и журнал на экране.
 - Ожидающие результаты (`forResult`) живут в памяти и не переживают смерть процесса — после неё экран-результат
   восстановится, но вызывающий уже не ждёт.
-- Navigation 3 молодая; на Nav2 та же схема ложится на `NavController`, меняется только `dispatch`.
+- Decompose хранит компоненты обеих историй. Для отображения используется отдельная проекция
+  видимого стека, а состояние Compose сохраняется по ID записи в обеих историях.
 
 ## Статус проверки
 

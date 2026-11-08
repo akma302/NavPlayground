@@ -1,7 +1,7 @@
-# Архитектура навигации NavPlayground
+# Архитектура навигации NavPlayground в decompose/manual
 
-Навигация одинакова в `main` (manual DI), `di/hilt`, `di/koin`, `di/metro` и `di/dagger`.
-DI определяет способ создания объектов. Контракты, очередь, middleware и операции со стеками общие.
+Ветка `decompose/manual` переиспользует команды, очередь, middleware и экраны `main`.
+Decompose получает следующее состояние обеих историй и управляет дочерними компонентами.
 
 ## 1. От действия пользователя до экрана
 
@@ -15,10 +15,11 @@ flowchart TB
     Worker["Один worker<br/>Dispatchers.Main.immediate"]
     Pipeline["core: NavigationPipeline<br/>цепочка middleware"]
     Dispatch["app: NavigatorImpl.dispatch<br/>команды экранов, выбор раздела, logout"]
-    Stack["NavigatorImpl<br/>выбранный раздел и два SnapshotStateList"]
+    Stack["SectionNavState<br/>выбранный раздел и две истории"]
+    Router["Decompose children<br/>diff, ComponentContext и InstanceKeeper"]
     Entries["NavEntryContributor от фич<br/>register в entryProvider"]
-    Display["app: AppNavigation / NavDisplay<br/>NavKey → NavEntry → Screen"]
-    Startup["MainActivity.onCreate<br/>initialize"]
+    Display["AppNavigation<br/>видимый ChildStack → Compose-экран"]
+    Startup["MainActivity.onCreate<br/>retainedComponent и attach"]
     Screen --> VM
     API -->|целевой ключ| VM
     VM -->|execute с командой| Contract
@@ -28,7 +29,8 @@ flowchart TB
     Worker --> Pipeline
     Pipeline -->|если команда пропущена| Dispatch
     Dispatch -->|изменяет| Stack
-    Stack -->|наблюдаемое состояние| Display
+    Stack --> Router
+    Router -->|наблюдаемые компоненты| Display
     Entries -->|соответствие ключа и экрана| Display
     Display -->|создаёт UI записи| Screen
     Startup -.->|инициализация вне очереди| Stack
@@ -37,18 +39,18 @@ flowchart TB
 Стрелки показывают поток выполнения и данных, а не Gradle-зависимости.
 `feature:api` хранит NavKey. В `feature:impl` находятся экраны, навигационные вклады и ViewModel, если она нужна фиче.
 Фичи используют интерфейс Navigator из core и API ключей других фич, без зависимости от чужих impl.
-`app` объединяет фичи, владеет реализацией навигатора и отображает стек через Navigation 3.
+`app` объединяет фичи, владеет навигатором и создаёт Decompose-роутер для Android-хоста.
 
 `execute()` сразу ставит Request в неограниченный Channel и возвращается. Worker обрабатывает
-команды по одной: экран не вызывает NavDisplay или изменение списка напрямую.
+команды по одной. Экраны отправляют намерения через Navigator.
 Pipeline находится в core, но terminal-функция `dispatch` передаётся из NavigatorImpl в app.
-Обработанные команды меняют стеки через dispatch. `initialize` загружает состояние до первого показа UI.
+Обработанные команды публикуют через `dispatch` следующее состояние двух историй одним событием.
+Decompose вычисляет разницу и обновляет дочерние компоненты.
 
-NavEntryContributor регистрирует сопоставление типа ключа с экраном.
+NavEntryContributor регистрирует сопоставление типа ключа с экраном в `ScreenRegistry`.
 Неизвестный ключ даёт UnknownDestinationScreen через fallback, а не ошибку поиска entry.
 Способ собрать contributors различается между DI-вариантами: [атлас DI](di/README.md).
-В manual DI регистрируются сами вклады, в Koin подключается модуль DSL, а в Dagger 2 модуль
-включается в `@Component`. Это отдельный шаг после подключения Gradle-модуля.
+AppContainer явно собирает вклады экранов, сериализаторов, обработчиков ссылок и middleware.
 
 ## 2. Middleware: порядок, остановка и подмена команды
 
@@ -139,7 +141,7 @@ sequenceDiagram
     alt исходный ключ не стал вершиной стека
         N-->>F: Result.failure с NotNavigated
     else экран выбора открыт
-        Note over M: UI создаёт NavDisplay по записи стека
+        Note over M: Decompose создаёт компонент записи
         alt пользователь подтвердил выбор
             M->>N: finishWithResult с тем же ключом
             N->>N: complete(value) и удалить pending
@@ -168,38 +170,38 @@ Pending и CompletableDeferred живут в памяти и не восстан
 
 ```mermaid
 flowchart TB
-    Create["MainActivity.onCreate"] --> Decode["Bundle → SectionHistory<br/>Home, Requests, выбранный раздел"]
-    Decode --> Need{"NavigatorImpl уже<br/>инициализирован?"}
-    Need -->|да| Existing["Сохранить текущее состояние<br/>поворот Activity"]
-    Need -->|нет| Session{"Есть действующая сессия?"}
+    Create["MainActivity.onCreate"] --> Need{"Есть retainedComponent?"}
+    Need -->|да| Existing["Подключить живой роутер<br/>поворот Activity"]
+    Need -->|нет| Decode["Bundle → SectionHistory и ID записей"]
+    Decode --> Session{"Есть действующая сессия?"}
     Session -->|да| Restore["Восстановить истории<br/>с валидными корнями и выбор"]
     Session -->|нет| Public["Открыть Home<br/>только публичный префикс"]
     Existing --> Cold{"Первый запуск Activity?"}
     Restore --> Cold
     Public --> Cold
     Cold -->|да| Intent["handleDeepLink текущего Intent"]
-    Cold -->|нет| UI["setContent / NavDisplay"]
+    Cold -->|нет| UI["setContent / AppNavigation"]
     Intent --> UI
-    UI --> Save["onSaveInstanceState<br/>обе истории и выбор → Bundle"]
+    UI --> Save["onSaveInstanceState<br/>обе истории, выбор и ID → Bundle"]
     Save -.->|при следующем пересоздании| Create
 ```
 
-При повороте навигатор уже хранит стеки. При смерти процесса новый навигатор проверяет корни
-и сессию перед тем, как передать записи в UI. Повреждённая или устаревшая история отбрасывается,
-а стартовый Feed доступен всегда. Старый Bundle с одним стеком читается как история Home.
+При повороте `retainedComponent` сохраняет Decompose-роутер. При уничтожении Activity навигатор
+отсоединяет роутер и держит снимок без Android-хоста. При смерти процесса новый навигатор проверяет
+корни и сессию до создания компонентов. Старый Bundle с одним стеком читается как история Home.
 
 | Состояние | Владелец и механизм |
 |---|---|
-| Ключи обоих стеков и выбранный раздел | NavigatorImpl. BackStackCodec сериализует ключи, Activity сохраняет снимок в Bundle |
-| Compose saveable state записи | rememberSaveableStateHolderNavEntryDecorator |
-| ViewModel записи | rememberViewModelStoreNavEntryDecorator и фабрика выбранного DI |
+| Ключи обоих стеков, выбор и ID | DecomposeRouter. BackStackCodec сериализует ключи, Activity сохраняет снимок в Bundle |
+| Compose saveable state записи | SaveableStateHolder по ID записи. Имя, выбор и прокрутка регистрируются внутри её реестра |
+| ViewModel записи | ViewModelStore в InstanceKeeper дочернего компонента и ManualViewModelFactory |
 | Сессия, flags, лог | Общие зависимости приложения; в playground хранятся в памяти |
 | Ожидание forResult | pending внутри NavigatorImpl; только память текущего процесса |
 
 Навигационный снимок содержит маршруты, Compose сохраняет состояние экранов отдельно.
 При смерти процесса ViewModel создаются заново, сессия в памяти пропадает, ожидания результатов прекращаются.
 При гостевом восстановлении Home обрезается на первой защищённой записи. Её потомки могут зависеть от её контекста.
-Requests отбрасывается целиком. Эту проверку выполняет `initialize`, потому что загрузка снимка проходит мимо middleware.
+Requests отбрасывается целиком. Эту проверку выполняет `createRouter` перед запуском Decompose.
 `onNewIntent` ставит новую ссылку в очередь команд. При восстановлении Activity прежний Intent не проигрывается.
 
 ## 6. Независимые разделы и защищённый вход
@@ -224,16 +226,19 @@ flowchart TB
 Requests, поэтому Back из списка возвращает на предыдущий экран Home.
 Logout очищает Requests даже при выбранном Home. Это предотвращает показ карточки прошлой сессии после нового входа.
 
-`AppNavigation` держит отдельный `rememberDecoratedNavEntries` на каждый стек.
-Декораторы отслеживают удаление записей, поэтому смена вкладки сохраняет ViewModel и Compose state
-скрытого раздела. При выборе Requests `NavDisplay` получает Home + Requests, чтобы за корнем
-Requests была сцена Home. С Home передаётся только его история, поэтому на его корне Back обрабатывает Android.
-Префикс `requests:` в contentKey отделяет состояние одинаковых ключей, если, например, Profile открыт в обеих историях.
+`DecomposeRouter` использует Generic Navigation, поскольку история Requests у гостя пуста.
+Только видимая запись получает состояние `RESUMED`. Остальные остаются `CREATED` и удерживают
+ViewModel. Выход удаляет закрытые записи и выбирает Home одним обновлением.
+
+Анимация читает проекцию `ChildStack`. Для Requests она содержит Home и Requests, чтобы жест Back
+с корня мог показать предыдущий экран Home. Для Home проекция содержит только его историю,
+поэтому на корне Back обрабатывает Android. Завершённый жест ставит Back в ту же очередь команд.
+Обычные переходы используют crossfade 700 мс. ID записи различает одинаковые маршруты и связывает
+сохранённый UI со стеком при восстановлении. [Generic Navigation](https://arkivanov.github.io/Decompose/navigation/children/overview/) ·
+[AndroidX ViewModel](https://arkivanov.github.io/Decompose/tips-tricks/composable-viewmodel/)
 
 Экраны списка и карточки читают один локальный набор данных. В ключе карточки передаётся только ID.
 Сценарий проверяет навигацию без отдельной ViewModel для статических данных.
-Официальные примеры описывают [несколько стеков](https://developer.android.com/guide/navigation/navigation-3/recipes/multiple-backstacks)
-и [декораторы записей](https://developer.android.com/guide/navigation/navigation-3/naventrydecorators).
 
 ## Исходники и проверки
 
@@ -244,7 +249,8 @@ Requests была сцена Home. С Home передаётся только е�
 - [DeepLinkResolver и UriPattern](../core/navigation/src/main/kotlin/dev/navplay/core/navigation/DeepLink.kt)
 - [AuthMiddleware](../feature/auth/impl/src/main/kotlin/dev/navplay/feature/auth/impl/AuthMiddleware.kt)
 - [BackStackCodec](../core/navigation/src/main/kotlin/dev/navplay/core/navigation/NavKeySerializers.kt)
-- [AppNavigation и декораторы записей](../app/src/main/kotlin/dev/navplay/app/navigation/AppNavigation.kt)
+- [DecomposeRouter и дочерние компоненты](../app/src/main/kotlin/dev/navplay/app/navigation/DecomposeRouter.kt)
+- [AppNavigation и сохранение Compose-состояния](../app/src/main/kotlin/dev/navplay/app/navigation/AppNavigation.kt)
 - [MainActivity: Intent и сохранение состояния](../app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
 - [NavigatorImplTest](../app/src/test/kotlin/dev/navplay/app/navigation/NavigatorImplTest.kt)
 - [NavigationPipelineTest](../core/navigation/src/test/kotlin/dev/navplay/core/navigation/NavigationPipelineTest.kt)
