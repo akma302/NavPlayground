@@ -27,10 +27,12 @@ dependencies {
     implementation(project(":feature:feed:impl"))
     implementation(project(":feature:profile:impl"))
     implementation(project(":feature:media:impl"))
+    implementation(project(":feature:requests:impl"))
 
     // Composition root uses the start key and the shared session contract.
     implementation(project(":feature:feed:api"))
     implementation(project(":feature:auth:api"))
+    implementation(project(":feature:requests:api"))
 
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)

@@ -45,7 +45,7 @@ fun ProfileScreen(
                 Text("BackTo(Feed)")
             }
             OutlinedButton(onClick = { viewModel.logout() }) {
-                Text("Log out -> NewRoot(Feed)")
+                Text("Log out")
             }
         }
     }

@@ -9,7 +9,9 @@ import dev.navplay.feature.auth.api.AuthNavKey
 
 class AuthEntryContributor() : NavEntryContributor {
     override fun register(scope: EntryProviderScope<NavKey>) {
-        scope.entry<AuthNavKey> { key -> AuthScreen(returnTo = key.returnTo) }
+        scope.entry<AuthNavKey> { key ->
+            AuthScreen(returnTo = key.returnTo, selectSection = key.selectSection)
+        }
     }
 }
 

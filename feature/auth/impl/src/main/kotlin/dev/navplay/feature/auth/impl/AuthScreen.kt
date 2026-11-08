@@ -24,6 +24,7 @@ import dev.navplay.core.navigation.NavKey
 @Composable
 fun AuthScreen(
     returnTo: NavKey?,
+    selectSection: Boolean = false,
     viewModel: AuthViewModel = manualViewModel(),
 ) {
     var name by rememberSaveable { mutableStateOf("Ada") }
@@ -52,7 +53,7 @@ fun AuthScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(onClick = { viewModel.signIn(name, returnTo) }) { Text("Sign in") }
+            Button(onClick = { viewModel.signIn(name, returnTo, selectSection) }) { Text("Sign in") }
             TextButton(onClick = { viewModel.cancel() }) { Text("Cancel") }
         }
     }

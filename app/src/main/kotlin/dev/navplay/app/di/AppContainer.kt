@@ -25,6 +25,8 @@ import dev.navplay.feature.profile.impl.ProfileDeepLinkHandler
 import dev.navplay.feature.profile.impl.ProfileEntryContributor
 import dev.navplay.feature.profile.impl.ProfileNavigationModule
 import dev.navplay.feature.profile.impl.ProfileViewModel
+import dev.navplay.feature.requests.impl.RequestsEntryContributor
+import dev.navplay.feature.requests.impl.RequestsNavigationModule
 import kotlinx.coroutines.cancel
 
 /** Composition root: every instance and connection is explicit. One container per Application. */
@@ -45,6 +47,7 @@ class AppContainer : AutoCloseable {
         FeedNavigationModule.navKeySerializers(),
         ProfileNavigationModule.navKeySerializers(),
         MediaNavigationModule.navKeySerializers(),
+        RequestsNavigationModule.navKeySerializers(),
         AppNavigationModule.stubNavKeySerializers(),
     )
     val codec = AppNavigationModule.backStackCodec(serializers)
@@ -58,11 +61,11 @@ class AppContainer : AutoCloseable {
         AuthMiddleware(sessions, log),
         AppNavigationModule.analyticsMiddleware(analytics),
     )
-    val navigator = NavigatorImpl(middleware, log, navigationScope)
+    val navigator = NavigatorImpl(middleware, log, navigationScope, sessions)
 
     val contributors: Set<NavEntryContributor> = setOf(
         AuthEntryContributor(), FeedEntryContributor(), ProfileEntryContributor(),
-        MediaEntryContributor(), StubEntryContributor(navigator),
+        MediaEntryContributor(), RequestsEntryContributor(navigator), StubEntryContributor(navigator),
     )
 
     val viewModelFactory = ManualViewModelFactory(mapOf(

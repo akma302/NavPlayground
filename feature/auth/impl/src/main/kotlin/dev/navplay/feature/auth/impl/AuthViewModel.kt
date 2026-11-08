@@ -5,17 +5,22 @@ import dev.navplay.core.navigation.NavKey
 import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.Navigator
 import dev.navplay.feature.auth.api.SessionManager
-import dev.navplay.feature.feed.api.FeedNavKey
 
 class AuthViewModel(
     private val navigator: Navigator,
     private val sessions: SessionManager,
 ) : ViewModel() {
 
-    fun signIn(name: String, returnTo: NavKey?) {
+    fun signIn(name: String, returnTo: NavKey?, selectSection: Boolean = false) {
         sessions.login(name.trim().ifEmpty { "guest" })
-        // Replace, а не Forward: экран входа не должен остаться в бэкстеке под целевым экраном.
-        navigator.execute(NavigationCommand.Replace(returnTo ?: FeedNavKey))
+        // Обычный переход заменяет Login целью. Для раздела навигатор снимает Login с
+        // исходного стека и переключает выбранную историю одной командой.
+        val continuation = when {
+            returnTo == null -> NavigationCommand.Back
+            selectSection -> NavigationCommand.SelectSection(returnTo, fromSignIn = true)
+            else -> NavigationCommand.Replace(returnTo)
+        }
+        navigator.execute(continuation)
     }
 
     fun cancel() {

@@ -17,6 +17,8 @@ import dev.navplay.feature.media.api.MediaPickerNavKey
 import dev.navplay.feature.media.impl.MediaPickerViewModel
 import dev.navplay.feature.profile.api.ProfileNavKey
 import dev.navplay.feature.profile.impl.ProfileViewModel
+import dev.navplay.feature.requests.api.RequestDetailsNavKey
+import dev.navplay.feature.requests.api.RequestsNavKey
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -46,13 +48,14 @@ class ManualGraphTest {
     }
 
     @Test fun `container registers every navigation contribution`() {
-        assertEquals(5, container.contributors.size)
+        assertEquals(6, container.contributors.size)
         assertEquals(7, container.middleware.size)
         assertEquals(3, container.deepLinkHandlers.size)
-        assertEquals(5, container.serializers.size)
+        assertEquals(6, container.serializers.size)
         val keys = listOf(
             FeedNavKey, AuthNavKey(returnTo = ProfileNavKey("42")),
             ProfileNavKey("42"), MediaPickerNavKey(maxCount = 3),
+            RequestsNavKey, RequestDetailsNavKey("REQ-101"), AuthNavKey(RequestsNavKey, selectSection = true),
             StubNavKey(feature = "media_picker", reason = "disabled"),
         )
         val provider = entryProvider<NavKey>(fallback = { error("Missing entry: $it") }) {
@@ -75,6 +78,7 @@ class ManualGraphTest {
         store.clear()
         assertNotSame(profile, first[ProfileViewModel::class])
 
+        container.navigator.initialize()
         other[AuthViewModel::class].signIn("manual-user", null)
         assertEquals("manual-user", container.sessions.session.value?.userName)
         assertEquals("manual-user", otherProfile.session.value?.userName)
@@ -83,7 +87,7 @@ class ManualGraphTest {
 
     @Test fun `auth and feature flag middleware use the same services as viewmodels`() = runTest {
         val navigator = container.navigator
-        navigator.ensureRoot(FeedNavKey)
+        navigator.initialize()
         val target = ProfileNavKey("42")
         navigator.execute(NavigationCommand.Forward(target))
         navigator.awaitIdle()

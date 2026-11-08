@@ -44,7 +44,7 @@ fun FeedScreen(viewModel: FeedViewModel = manualViewModel()) {
                 )
             }
 
-            item { Section("Auth guard + Replace/BackTo/NewRoot") }
+            item { Section("Auth guard + Replace/BackTo/Logout") }
             item {
                 Button(onClick = { viewModel.openProfile("1") }, modifier = Modifier.fillMaxWidth()) {
                     Text("Open profile #1 (RequiresAuth)")
@@ -60,7 +60,7 @@ fun FeedScreen(viewModel: FeedViewModel = manualViewModel()) {
                     onClick = { viewModel.logout() },
                     enabled = state.userName != null,
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Log out (session only)") }
+                ) { Text("Log out") }
             }
 
             item { Section("Throttling") }
