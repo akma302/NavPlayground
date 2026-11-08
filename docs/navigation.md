@@ -1,8 +1,7 @@
 # Архитектура навигации NavPlayground
 
 Навигация одинакова в `main` (manual DI), `di/hilt`, `di/koin` и `di/metro`.
-DI определяет способ создания объектов; контракты, очередь, middleware и операции со стеком общие.
-Схемы отражают исходники; UI-поведение на устройстве пока отдельно не проверялось.
+DI определяет способ создания объектов. Контракты, очередь, middleware и операции со стеками общие.
 
 ## 1. От действия пользователя до экрана
 
@@ -15,14 +14,15 @@ flowchart TB
     Queue["app: NavigatorImpl.execute<br/>Channel с Request"]
     Worker["Один worker<br/>Dispatchers.Main.immediate"]
     Pipeline["core: NavigationPipeline<br/>цепочка middleware"]
-    Dispatch["app: NavigatorImpl.dispatch<br/>Forward / Replace / NewRoot / Back / BackTo"]
-    Stack["Бэкстек NavigatorImpl<br/>Compose SnapshotStateList"]
+    Dispatch["app: NavigatorImpl.dispatch<br/>команды экранов, выбор раздела, logout"]
+    Stack["NavigatorImpl<br/>выбранный раздел и два SnapshotStateList"]
     Entries["NavEntryContributor от фич<br/>register в entryProvider"]
     Display["app: AppNavigation / NavDisplay<br/>NavKey → NavEntry → Screen"]
-    Startup["MainActivity.onCreate<br/>restore / ensureRoot"]
+    Startup["MainActivity.onCreate<br/>initialize"]
     Screen --> VM
     API -->|целевой ключ| VM
     VM -->|execute с командой| Contract
+    Screen -->|выбор раздела в AppNavigation| Contract
     Contract -->|реализация| Queue
     Queue -->|последовательно| Worker
     Worker --> Pipeline
@@ -35,14 +35,14 @@ flowchart TB
 ```
 
 Стрелки показывают поток выполнения и данных, а не Gradle-зависимости.
-`feature:api` хранит NavKey; `feature:impl` — экран, ViewModel и навигационные вклады.
+`feature:api` хранит NavKey. В `feature:impl` находятся экраны, навигационные вклады и ViewModel, если она нужна фиче.
 Фичи используют интерфейс Navigator из core и API ключей других фич, без зависимости от чужих impl.
 `app` объединяет фичи, владеет реализацией навигатора и отображает стек через Navigation 3.
 
 `execute()` сразу ставит Request в неограниченный Channel и возвращается. Worker обрабатывает
 команды по одной: экран не вызывает NavDisplay или изменение списка напрямую.
 Pipeline находится в core, но terminal-функция `dispatch` передаётся из NavigatorImpl в app.
-Обработанные команды меняют стек через dispatch; `restore` и `ensureRoot` — отдельные startup hooks.
+Обработанные команды меняют стеки через dispatch. `initialize` загружает состояние до первого показа UI.
 
 NavEntryContributor регистрирует сопоставление типа ключа с экраном.
 Неизвестный ключ даёт UnknownDestinationScreen через fallback, а не ошибку поиска entry.
@@ -72,20 +72,24 @@ NavigationPipeline сортирует middleware по `order`, затем стр
 порядка между собой.
 
 Middleware может передать исходную команду, передать изменённую либо не вызвать `proceed()`.
-FeatureFlagMiddleware подменяет целевой ключ на StubNavKey, AuthMiddleware — на AuthNavKey с returnTo;
-тип Forward/Replace/NewRoot сохраняется. Аналитика видит уже изменённую цель.
+FeatureFlagMiddleware подменяет цель на StubNavKey, AuthMiddleware — на AuthNavKey с returnTo.
+Forward/Replace/NewRoot сохраняют тип команды. При подмене цели SelectSection получается Forward:
+вход или заглушка остаются в текущем разделе, пока переключение недоступно. Аналитика видит итоговую цель.
 Обычная ошибка обработки логируется на уровне Request; CancellationException распространяется дальше.
 
 | Команда после middleware | Что делает dispatch |
 |---|---|
-| Forward | Добавляет ключ наверх |
-| Replace | Удаляет верхний ключ, затем добавляет новый |
-| NewRoot | Удаляет все записи и добавляет новый корень |
-| Back | Удаляет верхнюю запись, если она не последняя |
-| BackTo | Находит ближайший с конца равный ключ; inclusive удаляет и его |
+| Forward | Добавляет ключ в активную историю. Для ключа корня выбирает раздел |
+| Replace | Заменяет верхнюю запись поверх корня. Для ключа корня выбирает раздел |
+| NewRoot | Сбрасывает целевую историю до указанного корня |
+| SelectSection | Переключает историю. Повторный выбор удаляет записи над корнем |
+| Logout | Завершает сессию, очищает историю Requests и возвращает к Feed |
+| Back | Убирает верхнюю запись. От корня Requests ведёт к Home, от корня Home — в систему |
+| BackTo | Находит ближайший с конца равный ключ. Для Feed операция применяется к истории Home |
 | DeepLink | Только логирует неразрешённую ссылку: штатно Resolution уже должен превратить её в Forward |
 
-BackTo игнорируется, если ключ не найден или операция оставила бы стек пустым.
+BackTo с inclusive удаляет и целевой ключ. Команда игнорируется, если ключ отсутствует
+или операция оставила бы стек пустым.
 При удалении записей `popTo` завершает связанные ожидания результатов ошибкой Cancelled.
 
 ## 3. Пример: внешний deep link и авторизация
@@ -159,42 +163,76 @@ Forward или заменил его цель, после обработки Req
 Отмена вызывающей coroutine удаляет ожидание из pending; это не закрывает открытый экран автоматически.
 Pending и CompletableDeferred живут в памяти и не восстанавливаются после смерти процесса.
 
-## 5. Восстановление стека и время жизни состояния
+## 5. Восстановление историй и время жизни состояния
 
 ```mermaid
 flowchart TB
-    Create["MainActivity.onCreate"] --> Need{"Есть savedInstanceState<br/>и стек навигатора пуст?"}
-    Need -->|да| Decode["Bundle: STATE_BACKSTACK<br/>BackStackCodec.decodeOrNull"]
-    Decode --> Valid{"Ключи успешно прочитаны?"}
-    Valid -->|да| Restore["navigator.restore<br/>добавить ключи в пустой стек"]
-    Valid -->|нет| Root["ensureRoot с FeedNavKey<br/>добавить только если стек пуст"]
-    Restore --> Root
-    Need -->|нет| Root
-    Root --> Cold{"savedInstanceState отсутствует?"}
-    Cold -->|да| Intent["handleDeepLink текущего Intent<br/>если URI есть"]
+    Create["MainActivity.onCreate"] --> Decode["Bundle → SectionHistory<br/>Home, Requests, выбранный раздел"]
+    Decode --> Need{"NavigatorImpl уже<br/>инициализирован?"}
+    Need -->|да| Existing["Сохранить текущее состояние<br/>поворот Activity"]
+    Need -->|нет| Session{"Есть действующая сессия?"}
+    Session -->|да| Restore["Восстановить истории<br/>с валидными корнями и выбор"]
+    Session -->|нет| Public["Открыть Home<br/>только публичный префикс"]
+    Existing --> Cold{"Первый запуск Activity?"}
+    Restore --> Cold
+    Public --> Cold
+    Cold -->|да| Intent["handleDeepLink текущего Intent"]
     Cold -->|нет| UI["setContent / NavDisplay"]
     Intent --> UI
-    UI --> Save["onSaveInstanceState<br/>codec.encode копии бэкстека → Bundle"]
+    UI --> Save["onSaveInstanceState<br/>обе истории и выбор → Bundle"]
     Save -.->|при следующем пересоздании| Create
 ```
 
-При повороте process-level навигатор уже хранит стек: восстановление не перезаписывает его.
-После смерти процесса создаётся новый пустой навигатор; Activity пытается восстановить список ключей.
-Повреждённый JSON или неизвестный сериализатор дают null; ensureRoot обеспечивает стартовый Feed.
-Кодирование ключей выполняется через объединённые NavKeySerializers всех фич и app-заглушки.
+При повороте навигатор уже хранит стеки. При смерти процесса новый навигатор проверяет корни
+и сессию перед тем, как передать записи в UI. Повреждённая или устаревшая история отбрасывается,
+а стартовый Feed доступен всегда. Старый Bundle с одним стеком читается как история Home.
 
 | Состояние | Владелец и механизм |
 |---|---|
-| Список ключей экранов | NavigatorImpl; сохраняется BackStackCodec в Bundle |
+| Ключи обоих стеков и выбранный раздел | NavigatorImpl. BackStackCodec сериализует ключи, Activity сохраняет снимок в Bundle |
 | Compose saveable state записи | rememberSaveableStateHolderNavEntryDecorator |
 | ViewModel записи | rememberViewModelStoreNavEntryDecorator и фабрика выбранного DI |
 | Сессия, flags, лог | Общие зависимости приложения; в playground хранятся в памяти |
 | Ожидание forResult | pending внутри NavigatorImpl; только память текущего процесса |
 
-Восстановление ключей не восстанавливает объекты ViewModel, авторизованную сессию или незавершённые
-ожидания результатов. Restore не прогоняет восстановленные ключи через middleware.
-Внешний Intent при пересоздании с savedInstanceState повторно не обрабатывается;
-`onNewIntent` передаёт новую ссылку в ту же очередь команд.
+Навигационный снимок содержит маршруты, Compose сохраняет состояние экранов отдельно.
+При смерти процесса ViewModel создаются заново, сессия в памяти пропадает, ожидания результатов прекращаются.
+При гостевом восстановлении Home обрезается на первой защищённой записи. Её потомки могут зависеть от её контекста.
+Requests отбрасывается целиком. Эту проверку выполняет `initialize`, потому что загрузка снимка проходит мимо middleware.
+`onNewIntent` ставит новую ссылку в очередь команд. При восстановлении Activity прежний Intent не проигрывается.
+
+## 6. Независимые разделы и защищённый вход
+
+```mermaid
+flowchart TB
+    Tap["Вкладка Requests"] --> Select["SelectSection(RequestsNavKey)"]
+    Select --> Guard{"AuthMiddleware<br/>есть сессия?"}
+    Guard -->|нет| Login["Forward(AuthNavKey)<br/>Home остаётся выбранным"]
+    Login -->|Cancel или Back| Home["Home<br/>предыдущая запись"]
+    Login -->|успешный вход| Resume["SelectSection(RequestsNavKey)<br/>fromSignIn = true"]
+    Resume --> Dispatch["dispatch<br/>удалить Login и выбрать Requests"]
+    Guard -->|да| Dispatch
+    Dispatch --> Requests["Requests: список → карточка"]
+    Requests -->|выбрать Home| Home
+    Home -->|снова выбрать Requests с сессией| Requests
+    Requests -->|Back от корня| Home
+```
+
+В гостевом режиме доступны Feed и MediaPicker, если его флаг включён. Оба ключа Requests защищены.
+Вход хранит исходную цель и тип операции. Успешный вход убирает Login с исходного стека перед выбором
+Requests, поэтому Back из списка возвращает на предыдущий экран Home.
+Logout очищает Requests даже при выбранном Home. Это предотвращает показ карточки прошлой сессии после нового входа.
+
+`AppNavigation` держит отдельный `rememberDecoratedNavEntries` на каждый стек.
+Декораторы отслеживают удаление записей, поэтому смена вкладки сохраняет ViewModel и Compose state
+скрытого раздела. При выборе Requests `NavDisplay` получает Home + Requests, чтобы за корнем
+Requests была сцена Home. С Home передаётся только его история, поэтому на его корне Back обрабатывает Android.
+Префикс `requests:` в contentKey отделяет состояние одинаковых ключей, если, например, Profile открыт в обеих историях.
+
+Экраны списка и карточки читают один локальный набор данных. В ключе карточки передаётся только ID.
+Сценарий проверяет навигацию без отдельной ViewModel для статических данных.
+Официальные примеры описывают [несколько стеков](https://developer.android.com/guide/navigation/navigation-3/recipes/multiple-backstacks)
+и [декораторы записей](https://developer.android.com/guide/navigation/navigation-3/naventrydecorators).
 
 ## Исходники и проверки
 

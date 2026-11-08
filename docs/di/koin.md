@@ -1,14 +1,14 @@
 # Koin — реализация в di/koin
 
 **Реализовано в `di/koin`: Koin 4.2.2, Classic Kotlin DSL, без compiler plugin.**
-Hilt/KSP удалены. Чистая сборка и 93 JVM-теста проходят.
+Hilt/KSP удалены. Результаты проверок собраны в [WORK_CONTEXT](../WORK_CONTEXT.md).
 
 ```mermaid
 flowchart TB
     subgraph Definitions["Явные Kotlin DSL определения"]
         AppModule["AppNavigationModule.module<br/>single / factory / bind"]
-        Features["Auth / Feed / Profile / Media<br/>NavigationModule.module<br/>viewModelOf"]
-        Wiring["appModules: List of Module<br/>явная регистрация пяти модулей"]
+        Features["Auth / Feed / Profile / Media / Requests<br/>NavigationModule.module"]
+        Wiring["appModules: List of Module<br/>явная регистрация шести модулей"]
         AppModule -->|включить явно| Wiring
         Features -->|включить явно| Wiring
     end
@@ -36,7 +36,7 @@ flowchart TB
 ```
 
 Обычные конструкторы ViewModel не зависят от Koin. Каждая фича экспортирует
-`NavigationModule.module`, а `appModules` явно подключает инфраструктуру и четыре фичи.
+`NavigationModule.module`, а `appModules` явно подключает инфраструктуру и пять фич.
 `PlaygroundApp.onCreate` запускает Koin один раз; Activity использует `by inject()`
 и `getKoin().getAll<NavEntryContributor>().toSet()`.
 
@@ -70,18 +70,19 @@ ViewModelStore текущей записи NavDisplay сохраняет экз�
 Выбран Classic DSL без compiler plugin: ошибки разрешения зависимостей выявляются при выполнении.
 Koin поддерживает отдельный compiler plugin; в этой реализации он намеренно не подключён.
 `KoinGraphTest` поднимает те же `appModules` в изолированном контейнере со строгими overrides,
-проверяет общие экземпляры, все 5 entries, 7 middleware, 3 handlers и 5 serializer contributions,
+проверяет общие экземпляры, все 6 entries, 7 middleware, 3 handlers и 6 serializer contributions,
 фабрику всех четырёх ViewModel и разделение ViewModelStore, auth/feature flags,
 отмену coroutine scope при закрытии и свежие single-объекты нового контейнера.
 
 ## Привязка к исходникам
 
-- [Запуск Koin](https://github.com/akma302/NavPlayground/blob/aecd89c/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
-- [Список appModules](https://github.com/akma302/NavPlayground/blob/aecd89c/app/src/main/kotlin/dev/navplay/app/di/AppModules.kt)
-- [Общая инфраструктура](https://github.com/akma302/NavPlayground/blob/aecd89c/app/src/main/kotlin/dev/navplay/app/di/AppNavigationModule.kt)
-- [Пример фичи auth](https://github.com/akma302/NavPlayground/blob/aecd89c/feature/auth/impl/src/main/kotlin/dev/navplay/feature/auth/impl/AuthNavigationModule.kt)
-- [Получение зависимостей Activity](https://github.com/akma302/NavPlayground/blob/aecd89c/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
-- [KoinGraphTest](https://github.com/akma302/NavPlayground/blob/aecd89c/app/src/test/kotlin/dev/navplay/app/di/KoinGraphTest.kt)
+- [Запуск Koin](https://github.com/akma302/NavPlayground/blob/51584cc/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
+- [Список appModules](https://github.com/akma302/NavPlayground/blob/51584cc/app/src/main/kotlin/dev/navplay/app/di/AppModules.kt)
+- [Общая инфраструктура](https://github.com/akma302/NavPlayground/blob/51584cc/app/src/main/kotlin/dev/navplay/app/di/AppNavigationModule.kt)
+- [Пример фичи auth](https://github.com/akma302/NavPlayground/blob/51584cc/feature/auth/impl/src/main/kotlin/dev/navplay/feature/auth/impl/AuthNavigationModule.kt)
+- [Регистрация Requests](https://github.com/akma302/NavPlayground/blob/51584cc/feature/requests/impl/src/main/kotlin/dev/navplay/feature/requests/impl/RequestsNavigationModule.kt)
+- [Получение зависимостей Activity](https://github.com/akma302/NavPlayground/blob/51584cc/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
+- [KoinGraphTest](https://github.com/akma302/NavPlayground/blob/51584cc/app/src/test/kotlin/dev/navplay/app/di/KoinGraphTest.kt)
 
 [Koin DSL](https://insert-koin.io/docs/reference/koin-core/dsl/) ·
 [Koin Compose](https://insert-koin.io/docs/reference/koin-compose/compose/) ·

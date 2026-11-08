@@ -6,7 +6,7 @@
 flowchart TB
     subgraph Build["Сборка: Metro compiler plugin"]
         Scope["core:di<br/>AppScope"]
-        Modules["app + четыре фичи<br/>@BindingContainer<br/>@ContributesTo(AppScope)"]
+        Modules["app + пять фич<br/>@BindingContainer<br/>@ContributesTo(AppScope)"]
         VmDefs["Четыре ViewModel<br/>@Inject + @ViewModelKey<br/>@ContributesIntoMap(AppScope)"]
         Compiler["Проверка и генерация<br/>AppGraph : ViewModelGraph"]
         Scope -->|общий маркер агрегации| Modules
@@ -53,14 +53,15 @@ MetroX также предоставляет карты assisted factories; се
 
 ## Привязка к исходникам
 
-- [AppScope](https://github.com/akma302/NavPlayground/blob/3e140eb/core/di/src/main/kotlin/dev/navplay/core/di/AppScope.kt)
-- [AppGraph](https://github.com/akma302/NavPlayground/blob/3e140eb/app/src/main/kotlin/dev/navplay/app/di/AppGraph.kt)
-- [Application: создание графа](https://github.com/akma302/NavPlayground/blob/3e140eb/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
-- [MainActivity: передача фабрики в Compose](https://github.com/akma302/NavPlayground/blob/3e140eb/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
-- [Навигационные привязки и providers](https://github.com/akma302/NavPlayground/blob/3e140eb/app/src/main/kotlin/dev/navplay/app/di/AppNavigationModule.kt)
-- [AppViewModelFactory](https://github.com/akma302/NavPlayground/blob/3e140eb/app/src/main/kotlin/dev/navplay/app/di/AppViewModelFactory.kt)
-- [Пример ViewModel](https://github.com/akma302/NavPlayground/blob/3e140eb/feature/feed/impl/src/main/kotlin/dev/navplay/feature/feed/impl/FeedViewModel.kt)
-- [MetroGraphTest](https://github.com/akma302/NavPlayground/blob/3e140eb/app/src/test/kotlin/dev/navplay/app/di/MetroGraphTest.kt)
+- [AppScope](https://github.com/akma302/NavPlayground/blob/e8f7c38/core/di/src/main/kotlin/dev/navplay/core/di/AppScope.kt)
+- [AppGraph](https://github.com/akma302/NavPlayground/blob/e8f7c38/app/src/main/kotlin/dev/navplay/app/di/AppGraph.kt)
+- [Application: создание графа](https://github.com/akma302/NavPlayground/blob/e8f7c38/app/src/main/kotlin/dev/navplay/app/PlaygroundApp.kt)
+- [Регистрация Requests](https://github.com/akma302/NavPlayground/blob/e8f7c38/feature/requests/impl/src/main/kotlin/dev/navplay/feature/requests/impl/RequestsNavigationModule.kt)
+- [MainActivity: передача фабрики в Compose](https://github.com/akma302/NavPlayground/blob/e8f7c38/app/src/main/kotlin/dev/navplay/app/MainActivity.kt)
+- [Навигационные привязки и providers](https://github.com/akma302/NavPlayground/blob/e8f7c38/app/src/main/kotlin/dev/navplay/app/di/AppNavigationModule.kt)
+- [AppViewModelFactory](https://github.com/akma302/NavPlayground/blob/e8f7c38/app/src/main/kotlin/dev/navplay/app/di/AppViewModelFactory.kt)
+- [Пример ViewModel](https://github.com/akma302/NavPlayground/blob/e8f7c38/feature/feed/impl/src/main/kotlin/dev/navplay/feature/feed/impl/FeedViewModel.kt)
+- [MetroGraphTest](https://github.com/akma302/NavPlayground/blob/e8f7c38/app/src/test/kotlin/dev/navplay/app/di/MetroGraphTest.kt)
 
 Для версии 1.4.5 Compose API находятся в `dev.zacsweers.metrox.viewmodel` без `.compose`.
 Scope ставится на injected class/provider, а не на `@Binds`.
