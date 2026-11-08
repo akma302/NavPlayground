@@ -1,6 +1,6 @@
 # Архитектура навигации NavPlayground
 
-Навигация одинакова в `main` (manual DI), `di/hilt`, `di/koin` и `di/metro`.
+Навигация одинакова в `main` (manual DI), `di/hilt`, `di/koin`, `di/metro` и `di/dagger`.
 DI определяет способ создания объектов. Контракты, очередь, middleware и операции со стеками общие.
 
 ## 1. От действия пользователя до экрана
@@ -47,7 +47,8 @@ Pipeline находится в core, но terminal-функция `dispatch` п�
 NavEntryContributor регистрирует сопоставление типа ключа с экраном.
 Неизвестный ключ даёт UnknownDestinationScreen через fallback, а не ошибку поиска entry.
 Способ собрать contributors различается между DI-вариантами: [атлас DI](di/README.md).
-Для manual/Koin одного подключения Gradle-модуля недостаточно — регистрации добавляются явно.
+В manual DI регистрируются сами вклады, в Koin подключается модуль DSL, а в Dagger 2 модуль
+включается в `@Component`. Это отдельный шаг после подключения Gradle-модуля.
 
 ## 2. Middleware: порядок, остановка и подмена команды
 

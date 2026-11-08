@@ -27,6 +27,7 @@
 |---|---|---|---|
 | Manual DI | `main` | Реализован | [Граф Manual](docs/di/manual.md) |
 | Hilt | `di/hilt` | Реализован; текущий вариант | [Граф Hilt](docs/di/hilt.md) |
+| Dagger 2 | `di/dagger` | Реализован | [Граф Dagger 2](docs/di/dagger.md) |
 | Metro 1.4.5 | `di/metro` | Реализован | [Граф Metro](docs/di/metro.md) |
 | Koin 4.2.2 | `di/koin` | Реализован | [Граф Koin](docs/di/koin.md) |
 
