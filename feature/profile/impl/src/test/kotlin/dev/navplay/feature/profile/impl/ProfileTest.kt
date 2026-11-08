@@ -88,12 +88,11 @@ class ProfileViewModelTest {
     }
 
     @Test
-    fun `logout ends the session and resets the stack`() {
+    fun `logout delegates session and history cleanup to the same queued command`() {
         viewModel.logout()
 
-        assertNull(sessions.session.value)
         assertEquals(
-            listOf<NavigationCommand>(NavigationCommand.NewRoot(FeedNavKey)),
+            listOf<NavigationCommand>(NavigationCommand.Logout),
             navigator.commands,
         )
     }

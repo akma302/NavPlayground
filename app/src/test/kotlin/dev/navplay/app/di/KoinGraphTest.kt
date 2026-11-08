@@ -30,6 +30,8 @@ import dev.navplay.feature.media.api.MediaPickerNavKey
 import dev.navplay.feature.media.impl.MediaPickerViewModel
 import dev.navplay.feature.profile.api.ProfileNavKey
 import dev.navplay.feature.profile.impl.ProfileViewModel
+import dev.navplay.feature.requests.api.RequestDetailsNavKey
+import dev.navplay.feature.requests.api.RequestsNavKey
 import kotlin.reflect.KClass
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -90,13 +92,14 @@ class KoinGraphTest {
 
     @Test fun `qualified contributions include every feature without overrides`() {
         val contributors = koin.getAll<NavEntryContributor>()
-        assertEquals(5, contributors.size)
+        assertEquals(6, contributors.size)
         assertEquals(7, koin.getAll<NavigationMiddleware>().size)
         assertEquals(3, koin.getAll<DeepLinkHandler>().size)
-        assertEquals(5, koin.getAll<NavKeySerializers>().size)
+        assertEquals(6, koin.getAll<NavKeySerializers>().size)
         val keys = listOf(
             FeedNavKey, AuthNavKey(returnTo = ProfileNavKey("42")),
             ProfileNavKey("42"), MediaPickerNavKey(maxCount = 3),
+            RequestsNavKey, RequestDetailsNavKey("REQ-101"), AuthNavKey(RequestsNavKey, selectSection = true),
             StubNavKey(feature = "media_picker", reason = "disabled"),
         )
         val provider = entryProvider<NavKey>(fallback = { error("Missing entry: $it") }) {
@@ -120,6 +123,7 @@ class KoinGraphTest {
         assertNotSame(profile, viewModel(ProfileViewModel::class, firstStore))
 
         // The independent store still observes the application-level session.
+        koin.get<NavigatorImpl>().initialize()
         val secondAuth = viewModel(AuthViewModel::class, newStore())
         secondAuth.signIn("koin-user", null)
         assertEquals("koin-user", koin.get<SessionManager>().session.value?.userName)
@@ -129,7 +133,7 @@ class KoinGraphTest {
 
     @Test fun `real middleware uses the same session and flags as viewmodels`() = runTest {
         val navigator = koin.get<NavigatorImpl>()
-        navigator.ensureRoot(FeedNavKey)
+        navigator.initialize()
         val target = ProfileNavKey("42")
         navigator.execute(NavigationCommand.Forward(target))
         navigator.awaitIdle()

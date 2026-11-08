@@ -44,7 +44,7 @@ object AppNavigationModule {
         single<NavigationAnalytics> { LogNavigationAnalytics(get()) }
         single { DeepLinkResolver(getAll()) }
         single { BackStackCodec(getAll()) }
-        single { NavigatorImpl(getAll<NavigationMiddleware>().toSet(), get(), get(NavigationScope)) } bind Navigator::class
+        single { NavigatorImpl(getAll<NavigationMiddleware>().toSet(), get(), get(NavigationScope), get()) } bind Navigator::class
 
         factory<NavEntryContributor>(named("app.stub.entries")) { StubEntryContributor(get()) }
         factory<NavKeySerializers>(named("app.stub.serializers")) { stubNavKeySerializers() }
