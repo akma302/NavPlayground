@@ -27,6 +27,8 @@ import dev.navplay.feature.media.api.MediaPickerNavKey
 import dev.navplay.feature.media.impl.MediaPickerViewModel
 import dev.navplay.feature.profile.api.ProfileNavKey
 import dev.navplay.feature.profile.impl.ProfileViewModel
+import dev.navplay.feature.requests.api.RequestDetailsNavKey
+import dev.navplay.feature.requests.api.RequestsNavKey
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.createGraph
 import dev.zacsweers.metrox.viewmodel.ViewModelGraph
@@ -82,12 +84,13 @@ class MetroGraphTest {
     }
 
     @Test fun `generated graph aggregates every feature contribution`() {
-        assertEquals(5, graph.contributors.size)
+        assertEquals(6, graph.contributors.size)
         assertEquals(7, graph.middleware.size)
         assertEquals(3, graph.deepLinks.size)
         val keys = listOf(
             FeedNavKey, AuthNavKey(returnTo = ProfileNavKey("42")),
             ProfileNavKey("42"), MediaPickerNavKey(maxCount = 3),
+            RequestsNavKey, RequestDetailsNavKey("REQ-101"), AuthNavKey(RequestsNavKey, selectSection = true),
             StubNavKey(feature = "media_picker", reason = "disabled"),
         )
         val provider = entryProvider<NavKey>(fallback = { error("Missing entry: $it") }) {
@@ -111,6 +114,7 @@ class MetroGraphTest {
         val secondProfile = provider()[ProfileViewModel::class]
         assertNotSame(profile, secondProfile)
 
+        graph.navigator.initialize()
         auth.signIn("metro-user", null)
         assertEquals("metro-user", graph.sessions.session.value?.userName)
         assertEquals("metro-user", profile.session.value?.userName)

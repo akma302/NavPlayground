@@ -15,7 +15,8 @@ import dev.zacsweers.metro.Inject
  *
  * Команду с ключом [RequiresAuth] от неавторизованного пользователя заменяем на открытие экрана входа,
  * а исходный ключ кладём в `returnTo`. После логина экран входа делает `Replace(returnTo)`.
- * Тип команды сохраняется (Forward остаётся Forward, Replace — Replace).
+ * Для SelectSection открываем вход в текущей истории и откладываем переключение до входа.
+ * Иначе закрытый раздел стал бы активен ещё до проверки сессии.
  */
 @Inject
 class AuthMiddleware(
@@ -31,7 +32,8 @@ class AuthMiddleware(
         val key = command.targetKey
         if (key is RequiresAuth && !sessions.isAuthorized) {
             log.log("auth", "guard: ${key::class.simpleName} requires auth -> redirect to sign-in")
-            proceed(command.withTargetKey(AuthNavKey(returnTo = key)))
+            val signIn = AuthNavKey(returnTo = key, selectSection = command is NavigationCommand.SelectSection)
+            proceed(command.withTargetKey(signIn))
         } else {
             proceed(command)
         }

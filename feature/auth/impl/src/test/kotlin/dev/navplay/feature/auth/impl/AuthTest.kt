@@ -9,7 +9,6 @@ import dev.navplay.core.navigation.parse
 import dev.navplay.core.navigation.testing.FakeNavigator
 import dev.navplay.core.navigation.testing.MainDispatcherRule
 import dev.navplay.feature.auth.api.AuthNavKey
-import dev.navplay.feature.feed.api.FeedNavKey
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -122,12 +121,12 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `sign-in without return destination goes home and blank name becomes guest`() {
+    fun `sign-in without return destination dismisses Login and blank name becomes guest`() {
         viewModel.signIn("   ", returnTo = null)
 
         assertEquals("guest", sessions.session.value?.userName)
         assertEquals(
-            listOf<NavigationCommand>(NavigationCommand.Replace(FeedNavKey)),
+            listOf<NavigationCommand>(NavigationCommand.Back),
             navigator.commands,
         )
     }

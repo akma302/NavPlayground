@@ -19,6 +19,10 @@ import dev.navplay.feature.media.impl.MediaNavigationModule
 import dev.navplay.feature.profile.api.ProfileNavKey
 import dev.navplay.feature.profile.impl.ProfileEntryContributor
 import dev.navplay.feature.profile.impl.ProfileNavigationModule
+import dev.navplay.feature.requests.api.RequestDetailsNavKey
+import dev.navplay.feature.requests.api.RequestsNavKey
+import dev.navplay.feature.requests.impl.RequestsEntryContributor
+import dev.navplay.feature.requests.impl.RequestsNavigationModule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -34,6 +38,7 @@ class NavigationGraphTest {
         FeedEntryContributor(),
         ProfileEntryContributor(),
         MediaEntryContributor(),
+        RequestsEntryContributor(FakeNavigator()),
         StubEntryContributor(FakeNavigator()),
     )
 
@@ -42,7 +47,10 @@ class NavigationGraphTest {
         FeedNavKey,
         AuthNavKey(),
         AuthNavKey(returnTo = ProfileNavKey("1")),
+        AuthNavKey(returnTo = RequestsNavKey, selectSection = true),
         ProfileNavKey("1"),
+        RequestsNavKey,
+        RequestDetailsNavKey("REQ-101"),
         MediaPickerNavKey(maxCount = 3),
         StubNavKey(feature = "media_picker", reason = "disabled"),
     )
@@ -66,6 +74,7 @@ class NavigationGraphTest {
                 FeedNavigationModule.navKeySerializers(),
                 ProfileNavigationModule.navKeySerializers(),
                 MediaNavigationModule.navKeySerializers(),
+                RequestsNavigationModule.navKeySerializers(),
                 AppNavigationModule.stubNavKeySerializers(),
             ),
         )

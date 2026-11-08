@@ -7,10 +7,14 @@ import kotlinx.serialization.Serializable
 /**
  * Экран входа. [returnTo] — куда пользователь хотел попасть, пока его не завернул auth-guard.
  * Поле интерфейсного типа сериализуется полиморфно, поэтому ключ целевого экрана тоже должен быть
- * зарегистрирован в `NavKeySerializers` своей фичи.
+ * зарегистрирован в `NavKeySerializers` своей фичи. [selectSection] сохраняет тип намерения:
+ * после входа нужно выбрать историю раздела, а не вставить его корень в текущий стек.
  */
 @Serializable
-data class AuthNavKey(val returnTo: NavKey? = null) : NavKey
+data class AuthNavKey(
+    val returnTo: NavKey? = null,
+    val selectSection: Boolean = false,
+) : NavKey
 
 data class Session(val userName: String)
 

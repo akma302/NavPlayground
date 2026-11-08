@@ -24,6 +24,7 @@ import dev.zacsweers.metrox.viewmodel.metroViewModel
 @Composable
 fun AuthScreen(
     returnTo: NavKey?,
+    selectSection: Boolean = false,
     viewModel: AuthViewModel = metroViewModel(),
 ) {
     var name by rememberSaveable { mutableStateOf("Ada") }
@@ -52,7 +53,7 @@ fun AuthScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(onClick = { viewModel.signIn(name, returnTo) }) { Text("Sign in") }
+            Button(onClick = { viewModel.signIn(name, returnTo, selectSection) }) { Text("Sign in") }
             TextButton(onClick = { viewModel.cancel() }) { Text("Cancel") }
         }
     }

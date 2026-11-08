@@ -85,7 +85,7 @@ class FeedViewModel(
     }
 
     fun logout() {
-        sessions.logout()
+        navigator.execute(NavigationCommand.Logout)
     }
 
     /** Типизированный результат: вызывающий код читается линейно, без SavedStateHandle и строковых ключей. */

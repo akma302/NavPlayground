@@ -37,7 +37,6 @@ class ProfileViewModel(
     }
 
     fun logout() {
-        sessions.logout()
-        navigator.execute(NavigationCommand.NewRoot(FeedNavKey))
+        navigator.execute(NavigationCommand.Logout)
     }
 }
