@@ -15,6 +15,7 @@ import dev.navplay.core.navigation.middleware.FeatureFlagMiddleware
 import dev.navplay.feature.auth.api.AuthNavKey
 import dev.navplay.feature.auth.impl.AuthDeepLinkHandler
 import dev.navplay.feature.auth.impl.AuthMiddleware
+import dev.navplay.feature.auth.impl.AuthViewModel
 import dev.navplay.feature.auth.impl.InMemorySessionManager
 import dev.navplay.feature.feed.api.FeedNavKey
 import dev.navplay.feature.feed.impl.FeedDeepLinkHandler
@@ -22,6 +23,8 @@ import dev.navplay.feature.media.api.MediaId
 import dev.navplay.feature.media.api.MediaPickerNavKey
 import dev.navplay.feature.profile.api.ProfileNavKey
 import dev.navplay.feature.profile.impl.ProfileDeepLinkHandler
+import dev.navplay.feature.requests.api.RequestDetailsNavKey
+import dev.navplay.feature.requests.api.RequestsNavKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -32,12 +35,13 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * Тесты навигатора на «боевых» кусках: настоящий AuthMiddleware, настоящие обработчики deep link,
- * настоящая цепочка middleware. Без Android: бэкстек подставлен обычным ArrayList.
+ * настоящая цепочка middleware и два наблюдаемых стека из production.
  */
 class NavigatorImplTest {
     private val log = NavigationLog()
@@ -48,16 +52,14 @@ class NavigatorImplTest {
     )
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
-    private val stack = ArrayList<NavKey>()
-
-    private fun navigator(vararg extra: NavigationMiddleware): NavigatorImpl {
+    private fun navigator(vararg extra: NavigationMiddleware, saved: SectionHistory? = null): NavigatorImpl {
         val middleware = listOf(
             DeepLinkValidationMiddleware(resolver, log, allowedSchemes = setOf("navplay")),
             DeepLinkResolutionMiddleware(resolver, log),
             FeatureFlagMiddleware(flags, log),
             AuthMiddleware(sessions, log),
         ) + extra
-        return NavigatorImpl(stack, middleware, log, scope).also { it.ensureRoot(FeedNavKey) }
+        return NavigatorImpl(middleware.toSet(), log, scope, sessions).also { it.initialize(saved) }
     }
 
     @After
@@ -301,13 +303,128 @@ class NavigatorImplTest {
     }
 
     @Test
-    fun `restore fills only an empty stack, ensureRoot only an empty stack`() = runBlocking {
-        val nav = NavigatorImpl(stack, emptyList(), log, scope)
+    fun `switching preserves both histories and reselecting keeps only the root`() = runBlocking {
+        sessions.login("ada")
+        val nav = navigator()
+        val profile = ProfileNavKey("1")
+        val details = RequestDetailsNavKey("REQ-101")
 
-        nav.restore(listOf(FeedNavKey, ProfileNavKey("1")))
-        nav.restore(listOf(ProfileNavKey("ignored")))
-        nav.ensureRoot(FeedNavKey)
+        nav.run(NavigationCommand.Forward(profile))
+        nav.run(NavigationCommand.SelectSection(RequestsNavKey))
+        nav.run(NavigationCommand.Forward(details))
+        nav.run(NavigationCommand.SelectSection(FeedNavKey))
+        assertEquals(listOf(FeedNavKey, profile), nav.backStack)
+        nav.run(NavigationCommand.SelectSection(RequestsNavKey))
+        assertEquals(listOf(RequestsNavKey, details), nav.backStack)
 
-        assertEquals(listOf(FeedNavKey, ProfileNavKey("1")), nav.backStack)
+        nav.run(NavigationCommand.SelectSection(RequestsNavKey))
+        assertEquals(listOf(RequestsNavKey), nav.backStack)
+        assertEquals(listOf(FeedNavKey, profile), nav.backStack(AppSection.Home))
+        nav.run(NavigationCommand.SelectSection(FeedNavKey))
+        nav.run(NavigationCommand.SelectSection(FeedNavKey))
+        assertEquals(listOf(FeedNavKey), nav.backStack)
+    }
+
+    @Test
+    fun `Back pops request details then goes Home without cycling through tabs`() = runBlocking {
+        sessions.login("ada")
+        val nav = navigator()
+        nav.run(NavigationCommand.SelectSection(RequestsNavKey))
+        nav.run(NavigationCommand.Forward(RequestDetailsNavKey("REQ-101")))
+
+        nav.run(NavigationCommand.Back)
+        assertEquals(AppSection.Requests, nav.selectedSection)
+        assertEquals(listOf(RequestsNavKey), nav.backStack)
+        nav.run(NavigationCommand.Back)
+        assertEquals(AppSection.Home, nav.selectedSection)
+        nav.run(NavigationCommand.Back)
+        assertEquals(listOf(FeedNavKey), nav.backStack)
+        assertEquals(listOf(RequestsNavKey), nav.backStack(AppSection.Requests))
+    }
+
+    @Test
+    fun `guest can cancel entering Requests then sign in without leaving Login in either history`() = runBlocking {
+        val nav = navigator()
+        val auth = AuthViewModel(nav, sessions)
+        val select = NavigationCommand.SelectSection(RequestsNavKey)
+        nav.run(select)
+        val signIn = AuthNavKey(returnTo = RequestsNavKey, selectSection = true)
+        assertEquals(AppSection.Home, nav.selectedSection)
+        assertEquals(listOf(FeedNavKey, signIn), nav.backStack)
+        assertTrue(nav.backStack(AppSection.Requests).isEmpty())
+
+        auth.cancel()
+        nav.awaitIdle()
+        assertFalse(sessions.isAuthorized)
+        assertEquals(listOf(FeedNavKey), nav.backStack)
+
+        nav.run(select)
+        auth.signIn("ada", signIn.returnTo, signIn.selectSection)
+        nav.awaitIdle()
+        assertEquals(AppSection.Requests, nav.selectedSection)
+        assertEquals(listOf(RequestsNavKey), nav.backStack)
+        assertEquals(listOf(FeedNavKey), nav.backStack(AppSection.Home))
+    }
+
+    @Test
+    fun `a delayed sign-in continuation does not switch sections after Back`() = runBlocking {
+        val nav = navigator()
+        nav.run(NavigationCommand.SelectSection(RequestsNavKey))
+        nav.run(NavigationCommand.Back)
+
+        AuthViewModel(nav, sessions).signIn("ada", RequestsNavKey, selectSection = true)
+        nav.awaitIdle()
+
+        assertEquals(AppSection.Home, nav.selectedSection)
+        assertTrue(nav.backStack(AppSection.Requests).isEmpty())
+    }
+
+    @Test
+    fun `logout clears Requests even when another section is visible`() = runBlocking {
+        sessions.login("ada")
+        val nav = navigator()
+        nav.run(NavigationCommand.SelectSection(RequestsNavKey))
+        nav.run(NavigationCommand.Forward(RequestDetailsNavKey("REQ-101")))
+        nav.run(NavigationCommand.SelectSection(FeedNavKey))
+        nav.run(NavigationCommand.Forward(ProfileNavKey("1")))
+
+        nav.run(NavigationCommand.Logout)
+        assertFalse(sessions.isAuthorized)
+        assertEquals(AppSection.Home, nav.selectedSection)
+        assertEquals(listOf(FeedNavKey), nav.backStack)
+        assertTrue(nav.backStack(AppSection.Requests).isEmpty())
+
+        sessions.login("another-user")
+        nav.run(NavigationCommand.SelectSection(RequestsNavKey))
+        assertEquals(listOf(RequestsNavKey), nav.backStack)
+        nav.run(NavigationCommand.Logout)
+        assertEquals(AppSection.Home, nav.selectedSection)
+        assertTrue(nav.backStack(AppSection.Requests).isEmpty())
+    }
+
+    @Test
+    fun `cold restoration with a valid session keeps both stacks and selection, reinitialization is ignored`() {
+        sessions.login("ada")
+        val saved = SectionHistory(
+            selected = AppSection.Requests,
+            home = listOf(FeedNavKey, ProfileNavKey("1")),
+            requests = listOf(RequestsNavKey, RequestDetailsNavKey("REQ-101")),
+        )
+        val nav = navigator(saved = saved)
+        nav.initialize(saved.copy(selected = AppSection.Home, requests = emptyList()))
+
+        assertEquals(saved, nav.saveHistory())
+    }
+
+    @Test
+    fun `guest restoration keeps the public prefix and never restores the protected section`() {
+        val saved = SectionHistory(
+            selected = AppSection.Requests,
+            home = listOf(FeedNavKey, picker, ProfileNavKey("1"), MediaPickerNavKey(maxCount = 5)),
+            requests = listOf(RequestsNavKey, RequestDetailsNavKey("REQ-101")),
+        )
+        val nav = navigator(saved = saved)
+
+        assertEquals(SectionHistory(AppSection.Home, listOf(FeedNavKey, picker), emptyList()), nav.saveHistory())
     }
 }

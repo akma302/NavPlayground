@@ -18,12 +18,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import dev.navplay.core.navigation.NavKey
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 @Composable
 fun AuthScreen(
     returnTo: NavKey?,
+    selectSection: Boolean = false,
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
     var name by rememberSaveable { mutableStateOf("Ada") }
@@ -52,7 +53,7 @@ fun AuthScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(onClick = { viewModel.signIn(name, returnTo) }) { Text("Sign in") }
+            Button(onClick = { viewModel.signIn(name, returnTo, selectSection) }) { Text("Sign in") }
             TextButton(onClick = { viewModel.cancel() }) { Text("Cancel") }
         }
     }

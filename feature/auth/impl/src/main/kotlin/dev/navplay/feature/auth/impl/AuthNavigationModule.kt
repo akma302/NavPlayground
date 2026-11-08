@@ -21,7 +21,9 @@ import javax.inject.Singleton
 /** Фича сама вносит себя в граф: экран, middleware, deep link и сериализатор ключа. */
 class AuthEntryContributor @Inject constructor() : NavEntryContributor {
     override fun register(scope: EntryProviderScope<NavKey>) {
-        scope.entry<AuthNavKey> { key -> AuthScreen(returnTo = key.returnTo) }
+        scope.entry<AuthNavKey> { key ->
+            AuthScreen(returnTo = key.returnTo, selectSection = key.selectSection)
+        }
     }
 }
 

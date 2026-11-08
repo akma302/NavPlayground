@@ -33,7 +33,6 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun logout() {
-        sessions.logout()
-        navigator.execute(NavigationCommand.NewRoot(FeedNavKey))
+        navigator.execute(NavigationCommand.Logout)
     }
 }

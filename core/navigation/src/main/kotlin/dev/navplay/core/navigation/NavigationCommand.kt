@@ -8,6 +8,13 @@ sealed interface NavigationCommand {
     data class Forward(val key: NavKey) : NavigationCommand
     data class Replace(val key: NavKey) : NavigationCommand
     data class NewRoot(val key: NavKey) : NavigationCommand
+
+    /** Выбирает историю раздела. Возобновление после входа также закрывает экран входа. */
+    data class SelectSection(val key: NavKey, val fromSignIn: Boolean = false) : NavigationCommand
+
+    /** Завершает сессию и очищает закрытую историю в одной операции навигатора. */
+    data object Logout : NavigationCommand
+
     data object Back : NavigationCommand
 
     /** Вернуться к ближайшему (с конца) экрану [key]. [inclusive] = true — убрать и сам [key]. */
@@ -27,19 +34,21 @@ enum class DeepLinkSource {
     Internal,
 }
 
-/** Ключ, который команда кладёт в стек (Forward / Replace / NewRoot); у остальных команд — null. */
+/** Цель для middleware: запись экрана или корень выбираемого раздела. */
 val NavigationCommand.targetKey: NavKey?
     get() = when (this) {
         is NavigationCommand.Forward -> key
         is NavigationCommand.Replace -> key
         is NavigationCommand.NewRoot -> key
+        is NavigationCommand.SelectSection -> key
         else -> null
     }
 
-/** Та же команда, но с другим целевым ключом. Для команд без целевого ключа возвращает себя. */
+/** Подмена цели выбора раздела открывает экран в текущем разделе, не переключая историю. */
 fun NavigationCommand.withTargetKey(newKey: NavKey): NavigationCommand = when (this) {
     is NavigationCommand.Forward -> copy(key = newKey)
     is NavigationCommand.Replace -> copy(key = newKey)
     is NavigationCommand.NewRoot -> copy(key = newKey)
+    is NavigationCommand.SelectSection -> NavigationCommand.Forward(newKey)
     else -> this
 }

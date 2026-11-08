@@ -7,13 +7,14 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import dagger.hilt.android.AndroidEntryPoint
 import dev.navplay.app.navigation.AppNavigation
+import dev.navplay.app.navigation.AppSection
+import dev.navplay.app.navigation.SectionHistory
 import dev.navplay.app.navigation.NavigatorImpl
 import dev.navplay.core.navigation.BackStackCodec
 import dev.navplay.core.navigation.DeepLinkSource
 import dev.navplay.core.navigation.NavEntryContributor
 import dev.navplay.core.navigation.NavigationCommand
 import dev.navplay.core.navigation.NavigationLog
-import dev.navplay.feature.feed.api.FeedNavKey
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -30,14 +31,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Поворот экрана: Singleton-навигатор жив, стек не пуст — восстанавливать нечего.
-        // Смерть процесса: навигатор новый и пустой — поднимаем стек из Bundle (все NavKey сериализуемы).
-        if (savedInstanceState != null && navigator.backStack.isEmpty()) {
-            savedInstanceState.getString(STATE_BACKSTACK)
-                ?.let(codec::decodeOrNull)
-                ?.let(navigator::restore)
-        }
-        navigator.ensureRoot(FeedNavKey)
+        navigator.initialize(
+            savedInstanceState?.let { state ->
+                SectionHistory(
+                    selected = if (state.getBoolean(STATE_REQUESTS_SELECTED)) AppSection.Requests else AppSection.Home,
+                    // Старый Bundle с одним стеком всё ещё подходит для Home.
+                    home = state.getString(STATE_BACKSTACK)?.let(codec::decodeOrNull).orEmpty(),
+                    requests = state.getString(STATE_REQUESTS)?.let(codec::decodeOrNull).orEmpty(),
+                )
+            },
+        )
 
         // Холодный старт по ссылке. При пересоздании активити ссылку повторно не обрабатываем.
         if (savedInstanceState == null) handleDeepLink(intent)
@@ -57,7 +60,13 @@ class MainActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         try {
-            outState.putString(STATE_BACKSTACK, codec.encode(navigator.backStack.toList()))
+            val history = navigator.saveHistory()
+            // Кодируем обе истории до записи, чтобы ошибка сериализации не оставила полуснимок.
+            val home = codec.encode(history.home)
+            val requests = codec.encode(history.requests)
+            outState.putString(STATE_BACKSTACK, home)
+            outState.putString(STATE_REQUESTS, requests)
+            outState.putBoolean(STATE_REQUESTS_SELECTED, history.selected == AppSection.Requests)
         } catch (e: Exception) {
             // Ключ без зарегистрированного сериализатора не должен ронять приложение при сворачивании.
             log.log("nav", "backstack was not saved: $e")
@@ -72,5 +81,7 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val STATE_BACKSTACK = "navplay.backstack"
+        const val STATE_REQUESTS = "navplay.requests.backstack"
+        const val STATE_REQUESTS_SELECTED = "navplay.requests.selected"
     }
 }
